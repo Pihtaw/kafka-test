@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "3HMV/jG6q5c=",
+  "success": true,
+  "projectFilePath": "/Users/nastyamolkova/Downloads/kafka-practice/CrashTest/CrashTest.csproj",
+  "expectedPackageFiles": [
+    "/Users/nastyamolkova/.nuget/packages/confluent.kafka/2.15.1/confluent.kafka.2.15.1.nupkg.sha512",
+    "/Users/nastyamolkova/.nuget/packages/librdkafka.redist/2.15.1/librdkafka.redist.2.15.1.nupkg.sha512"
+  ],
+  "logs": []
+}
