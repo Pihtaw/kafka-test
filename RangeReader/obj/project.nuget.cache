@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "plqq5pTDT9c=",
+  "success": true,
+  "projectFilePath": "/Users/nastyamolkova/Downloads/kafka-practice/RangeReader/RangeReader.csproj",
+  "expectedPackageFiles": [
+    "/Users/nastyamolkova/.nuget/packages/confluent.kafka/2.15.1/confluent.kafka.2.15.1.nupkg.sha512",
+    "/Users/nastyamolkova/.nuget/packages/librdkafka.redist/2.15.1/librdkafka.redist.2.15.1.nupkg.sha512"
+  ],
+  "logs": []
+}
