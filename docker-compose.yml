@@ -28,3 +28,32 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19092
     depends_on:
       - kafka
+  # Provectus Kafka UI
+  kafka-ui-provectus:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui-provectus
+    ports:
+      - "8081:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19092
+    depends_on:
+      - kafka
+
+  # docker compose run --rm kcat -b kafka:19092 -L
+  kcat:
+    image: edenhill/kcat:1.7.1
+    platform: linux/amd64
+    profiles: ["tools"]
+    depends_on:
+      - kafka
+
+  # docker compose run --rm connect
+  connect:
+    image: docker.redpanda.com/redpandadata/connect:latest
+    profiles: ["tools"]
+    volumes:
+      - ./tools/connect.yaml:/connect.yaml
+    command: ["run"]
+    depends_on:
+      - kafka
