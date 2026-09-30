@@ -1,129 +1,186 @@
 ﻿using System.Text;
 using Confluent.Kafka;
+using Confluent.Kafka.Admin;
 
-// dotnet run -- <топик> <партиция> <from> <to>
-string topic  = args.Length > 0 ? args[0] : "test-topic";
-int partition = args.Length > 1 ? int.Parse(args[1]) : 0;
-long from     = args.Length > 2 ? long.Parse(args[2]) : 2;
-long to       = args.Length > 3 ? long.Parse(args[3]) : 5;
+if (args.Length < 3)
+{
+    Console.WriteLine("Использование: dotnet run -- <топик> \"<с>\" \"<по>\"");
+    Console.WriteLine("Пример:        dotnet run -- test-topic \"2026-09-30 18:00:00\" \"2026-09-30 18:05:00\"");
+    return;
+}
+
+string topic = args[0];
+DateTimeOffset fromTime = DateTimeOffset.Parse(args[1]);
+DateTimeOffset toTime = DateTimeOffset.Parse(args[2]);
+long fromMs = fromTime.ToUnixTimeMilliseconds();
+long toMs = toTime.ToUnixTimeMilliseconds();
 const string groupId = "test-group";
+const string bootstrap = "localhost:9092";
 
-Console.WriteLine($"Задача: прочитать {topic}, партиция {partition}, offsets {from}..{to} включительно\n");
+Console.WriteLine($"Задача: {topic}, время [{fromTime:yyyy-MM-dd HH:mm:ss} ; {toTime:yyyy-MM-dd HH:mm:ss})");
+Console.WriteLine($"        в миллисекундах [{fromMs} ; {toMs})\n");
 
-var tp = new TopicPartition(topic, partition); // адрес одной партиции
+if (fromMs >= toMs)
+{
+    Console.WriteLine("ОТКАЗ: время «с» должно быть раньше времени «по»");
+    return;
+}
 
-// группа ДО 
-var before = GetCommitted(groupId, tp);
-Console.WriteLine($"ДО offset группы '{groupId}': {before}");
+using var admin = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = bootstrap }).Build();
+
+var topicMeta = admin.GetMetadata(topic, TimeSpan.FromSeconds(5)).Topics[0];
+if (topicMeta.Error.IsError)
+{
+    Console.WriteLine($"ОТКАЗ: топик '{topic}' недоступен: {topicMeta.Error.Reason}");
+    return;
+}
+
+// список партиций топика
+var partitions = topicMeta.Partitions
+    .Select(p => new TopicPartition(topic, p.PartitionId))
+    .OrderBy(tp => tp.Partition.Value)
+    .ToList();
+
+Dictionary<int, long> low, high, fromOffsets, toOffsets;
+try
+{
+    low = await ListOffsets(OffsetSpec.Earliest());
+    high = await ListOffsets(OffsetSpec.Latest());
+    fromOffsets = await ListOffsets(OffsetSpec.ForTimestamp(fromMs));
+    toOffsets = await ListOffsets(OffsetSpec.ForTimestamp(toMs));
+}
+catch (ListOffsetsException ex)
+{
+    Console.WriteLine($"ОТКАЗ: брокер не смог посчитать offsets: {ex.Message}");
+    return;
+}
+
+var plan = new List<(TopicPartition Tp, long Start, long End)>();
+
+Console.WriteLine("План по партициям (границы зафиксированы до чтения):");
+Console.WriteLine("партиция | low | high | с (offset) | по (offset, не вкл.) | сообщений");
+foreach (var tp in partitions)
+{
+    int p = tp.Partition.Value;
+
+    long start = fromOffsets[p] == Offset.End.Value ? high[p] : fromOffsets[p];
+    long end = toOffsets[p] == Offset.End.Value ? high[p] : toOffsets[p];
+
+    start = Math.Clamp(start, low[p], high[p]);
+    end = Math.Clamp(end, start, high[p]);
+
+    long count = end - start;
+    Console.WriteLine($"  {p,8} | {low[p],3} | {high[p],4} | {start,10} | {end,20} | {count,9}");
+
+    if (count > 0) plan.Add((tp, start, end));
+}
+
+if (plan.Count == 0)
+{
+    Console.WriteLine("\nВ этом промежутке времени сообщений нет — читать нечего.");
+    return;
+}
+
+var before = GetCommitted(groupId, partitions);
+Console.WriteLine($"\n[ДО]    закладки группы '{groupId}': {Format(before)}");
 
 var config = new ConsumerConfig
 {
-    BootstrapServers = "localhost:9092",
-    GroupId = groupId,             // без него библиотека не создает консьюмер, а мы по нему ищем закладку
-    // но при Assign консьюмер не вступает в группу и не вызывает ребалансировку
-    EnableAutoCommit = false,      // автоматический коммит выключаем
+    BootstrapServers = bootstrap,
+    GroupId = groupId,
+    EnableAutoCommit = false,
     EnableAutoOffsetStore = false
 };
-
 using var consumer = new ConsumerBuilder<string, string>(config).Build();
 
-var wm = consumer.QueryWatermarkOffsets(tp, TimeSpan.FromSeconds(5));
-long low = wm.Low.Value;
-long high = wm.High.Value;
-Console.WriteLine($"low={low}, high={high} - существуют offsets {low}..{high - 1}");
+// каждая партиция со своего стартового offset
+consumer.Assign(plan.Select(x => new TopicPartitionOffset(x.Tp, x.Start)));
 
-if (from > to)
-{
-    Console.WriteLine($"начало диапазона ({from}) больше конца ({to})");
-    return;
-}
-if (low == high)
-{
-    Console.WriteLine("партиция пустая");
-    return;
-}
-if (from < low)
-{
-    Console.WriteLine($"offset {from} уже удалён (первый доступный — {low})");
-    return;
-}
-if (to >= high)
-{
-    Console.WriteLine($"offset {to} ещё не существует (последний — {high - 1})");
-    return;
-}
+var endOf = plan.ToDictionary(x => x.Tp.Partition.Value, x => x.End);
+var readCount = plan.ToDictionary(x => x.Tp.Partition.Value, _ => 0L);
+var notDone = plan.Select(x => x.Tp.Partition.Value).ToHashSet();
+int outOfWindow = 0;
 
-consumer.Assign(new TopicPartitionOffset(tp, from));
-Console.WriteLine($"\n назначена партиция {partition}, старт с offset {from}\n");
-
-int count = 0;
-while (true)
+Console.WriteLine();
+while (notDone.Count > 0)
 {
     var r = consumer.Consume(TimeSpan.FromSeconds(5));
-
     if (r == null)
     {
-        Console.WriteLine("Таймаут: за 5 секунд ничего не пришло");
+        Console.WriteLine($"Таймаут: не дочитаны партиции {string.Join(", ", notDone)}");
         break;
     }
 
-    if (r.Offset.Value > to) break;
+    int p = r.Partition.Value;
+    long o = r.Offset.Value;
 
-    count++;
+    // дошли до конца партиции
+    if (o >= endOf[p])
+    {
+        MarkDone(p, r.TopicPartition);
+        continue;
+    }
+
+    readCount[p]++;
+
+    long ts = r.Message.Timestamp.UnixTimestampMs;
+    bool inWindow = ts >= fromMs && ts < toMs;
+    if (!inWindow) outOfWindow++;
+    string time = DateTimeOffset.FromUnixTimeMilliseconds(ts).ToLocalTime().ToString("HH:mm:ss.fff");
 
     var headers = r.Message.Headers == null
         ? ""
         : string.Join(", ", r.Message.Headers.Select(h =>
             $"{h.Key}={(h.GetValueBytes() is { } b ? Encoding.UTF8.GetString(b) : "null")}"));
 
-    Console.WriteLine($"  offset {r.Offset.Value} | key={r.Message.Key} | headers: {headers} | {r.Message.Value}");
+    Console.WriteLine($"  p{p} o{o} | {time} ({r.Message.Timestamp.Type}){(inWindow ? "" : "вне окна")} " +
+                      $"| key={r.Message.Key} | {headers} | {r.Message.Value}");
 
-    if (r.Offset.Value == to) break; // дошли до конца диапазона
+    if (o == endOf[p] - 1) MarkDone(p, r.TopicPartition);
 }
 
-Console.WriteLine($"\nПрочитано сообщений: {count} (ожидалось {to - from + 1})");
+consumer.Close();
 
-consumer.Close(); // коммита НЕ будет мы ничего не помечали и автокоммит выключен
-
-var after = GetCommitted(groupId, tp);
-Console.WriteLine($"ПОСЛЕ offset группы '{groupId}': {after}"); // прочитали кусок, который группа уже читала, но закладка не должна поменяться
-Console.WriteLine(before == after
-    ? "Offset группы не изменился"
-    : "Offset группы изменился");
-
-static string GetCommitted(string groupId, TopicPartition tp)
+Console.WriteLine("\nСводка по партициям:");
+foreach (var x in plan)
 {
-    var cfg = new ConsumerConfig
-    {
-        BootstrapServers = "localhost:9092",
-        GroupId = groupId,
-        EnableAutoCommit = false
-    };
-    using var c = new ConsumerBuilder<Ignore, Ignore>(cfg).Build();
-    var committed = c.Committed(new[] { tp }, TimeSpan.FromSeconds(5));
-    var offset = committed[0].Offset;
-    return offset == Offset.Unset ? "нет коммита" : offset.Value.ToString();
+    int p = x.Tp.Partition.Value;
+    long expected = x.End - x.Start;
+    Console.WriteLine($"партиция {p}: прочитано {readCount[p]} из {expected}{(readCount[p] == expected ? "" : "  - НЕ СОВПАДАЕТ")}");
+}
+Console.WriteLine($"всего: {readCount.Values.Sum()} из {plan.Sum(x => x.End - x.Start)}");
+if (outOfWindow > 0)
+    Console.WriteLine($"сообщений со временем вне окна: {outOfWindow} (CreateTime от продюсера идёт не строго по порядку)");
+
+var after = GetCommitted(groupId, partitions);
+Console.WriteLine($"\n[ПОСЛЕ] закладки группы '{groupId}': {Format(after)}");
+Console.WriteLine(Format(before) == Format(after)
+    ? "Закладки группы не изменились"
+    : "Закладки группы изменились!");
+
+async Task<Dictionary<int, long>> ListOffsets(OffsetSpec spec)
+{
+    var request = partitions.Select(tp => new TopicPartitionOffsetSpec { TopicPartition = tp, OffsetSpec = spec });
+    var result = await admin.ListOffsetsAsync(request);
+    return result.ResultInfos.ToDictionary(
+        info => info.TopicPartitionOffsetError.Partition.Value,
+        info => info.TopicPartitionOffsetError.Offset.Value);
 }
 
-/*
-консьюмер:
-партиция 0 | offset 0 | key=order-0 | eventType=OrderCreated | {"orderId":0,"amount":0}
-партиция 0 | offset 1 | key=order-2 | eventType=OrderCreated | {"orderId":2,"amount":200}
-партиция 0 | offset 2 | key=order-0 | eventType=OrderCreated | {"orderId":3,"amount":300}
-партиция 0 | offset 3 | key=order-2 | eventType=OrderCreated | {"orderId":5,"amount":500}
-партиция 0 | offset 4 | key=order-0 | eventType=OrderCreated | {"orderId":6,"amount":600}
-партиция 0 | offset 5 | key=order-2 | eventType=OrderCreated | {"orderId":8,"amount":800}
-партиция 0 | offset 6 | key=order-0 | eventType=OrderCreated | {"orderId":9,"amount":900}
-партиция 1 | offset 0 | key=order-1 | eventType=OrderCreated | {"orderId":1,"amount":100}
-партиция 1 | offset 1 | key=order-1 | eventType=OrderCreated | {"orderId":4,"amount":400}
-партиция 1 | offset 2 | key=order-1 | eventType=OrderCreated | {"orderId":7,"amount":700}
+void MarkDone(int partition, TopicPartition tp)
+{
+    if (notDone.Remove(partition)) consumer.Pause(new[] { tp });
+}
 
-планируем прочитать 2-5, то есть 
-партиция 0 | offset 2 | key=order-0 | eventType=OrderCreated | {"orderId":3,"amount":300}
-партиция 0 | offset 5 | key=order-2 | eventType=OrderCreated | {"orderId":8,"amount":800}
-партиция 0 | offset 4 | key=order-0 | eventType=OrderCreated | {"orderId":6,"amount":600}
-партиция 0 | offset 5 | key=order-2 | eventType=OrderCreated | {"orderId":8,"amount":800}
+// Закладки группы по всем партициям — отдельным временным консьюмером.
+static Dictionary<int, string> GetCommitted(string groupId, List<TopicPartition> partitions)
+{
+    var cfg = new ConsumerConfig { BootstrapServers = "localhost:9092", GroupId = groupId, EnableAutoCommit = false };
+    using var c = new ConsumerBuilder<Ignore, Ignore>(cfg).Build();
+    return c.Committed(partitions, TimeSpan.FromSeconds(5)).ToDictionary(
+        x => x.Partition.Value,
+        x => x.Offset == Offset.Unset ? "нет" : x.Offset.Value.ToString());
+}
 
-в 0 партиции 6 штук - high = 7(6+1)
-ожидаю после отработки офсет там же на 7
-*/
+static string Format(Dictionary<int, string> offsets)
+    => string.Join(", ", offsets.OrderBy(x => x.Key).Select(x => $"p{x.Key}={x.Value}"));
