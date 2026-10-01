@@ -1,0 +1,79 @@
+[
+  {
+    "name": "валидное OrderCreated v1",
+    "headers": { "eventType": "OrderCreated", "version": "1" },
+    "payload": "{\"orderId\":1,\"amount\":500}",
+    "expectedVerdict": "Allowed",
+    "expectedReason": "Ok"
+  },
+  {
+    "name": "валидное OrderCreated v2",
+    "headers": { "eventType": "OrderCreated", "version": "2" },
+    "payload": "{\"orderId\":2,\"amount\":700,\"currency\":\"RUB\"}",
+    "expectedVerdict": "Allowed",
+    "expectedReason": "Ok"
+  },
+  {
+    "name": "валидное OrderCancelled v1",
+    "headers": { "eventType": "OrderCancelled", "version": "1" },
+    "payload": "{\"orderId\":1,\"reason\":\"client\"}",
+    "expectedVerdict": "Allowed",
+    "expectedReason": "Ok"
+  },
+  {
+    "name": "нет заголовка eventType",
+    "headers": { "version": "1" },
+    "payload": "{\"orderId\":3,\"amount\":100}",
+    "expectedVerdict": "Rejected",
+    "expectedReason": "MissingEventType"
+  },
+  {
+    "name": "нет заголовка version",
+    "headers": { "eventType": "OrderCreated" },
+    "payload": "{\"orderId\":4,\"amount\":100}",
+    "expectedVerdict": "Rejected",
+    "expectedReason": "MissingVersion"
+  },
+  {
+    "name": "неизвестный eventType",
+    "headers": { "eventType": "OrderPaid", "version": "1" },
+    "payload": "{\"orderId\":5}",
+    "expectedVerdict": "Rejected",
+    "expectedReason": "UnknownEvent"
+  },
+  {
+    "name": "неизвестная версия",
+    "headers": { "eventType": "OrderCreated", "version": "3" },
+    "payload": "{\"orderId\":6,\"amount\":100}",
+    "expectedVerdict": "Rejected",
+    "expectedReason": "UnknownEvent"
+  },
+  {
+    "name": "битый JSON",
+    "headers": { "eventType": "OrderCreated", "version": "1" },
+    "payload": "{\"orderId\":7,\"amount\":",
+    "expectedVerdict": "ConversionError",
+    "expectedReason": "InvalidPayload"
+  },
+  {
+    "name": "неверный тип поля",
+    "headers": { "eventType": "OrderCreated", "version": "1" },
+    "payload": "{\"orderId\":8,\"amount\":\"много\"}",
+    "expectedVerdict": "ConversionError",
+    "expectedReason": "InvalidPayload"
+  },
+  {
+    "name": "v2 без обязательного currency",
+    "headers": { "eventType": "OrderCreated", "version": "2" },
+    "payload": "{\"orderId\":9,\"amount\":100}",
+    "expectedVerdict": "ConversionError",
+    "expectedReason": "InvalidPayload"
+  },
+  {
+    "name": "лишнее поле, которого нет в DTO",
+    "headers": { "eventType": "OrderCreated", "version": "1" },
+    "payload": "{\"orderId\":10,\"amount\":100,\"comment\":\"hi\"}",
+    "expectedVerdict": "ConversionError",
+    "expectedReason": "InvalidPayload"
+  }
+]
