@@ -1,0 +1,433 @@
+{
+  "mode": "dry-run (ничего не отправлялось)",
+  "topic": "orders-multi",
+  "window": {
+    "from": "2026-10-05T18:23:51+03:00",
+    "to": "2026-10-05T18:23:52+03:00",
+    "fromMs": 1791213831000,
+    "toMs": 1791213832000
+  },
+  "partitions": [
+    {
+      "topic": "orders-multi",
+      "partition": 0,
+      "low": 0,
+      "high": 5,
+      "start": 0,
+      "end": 5
+    },
+    {
+      "topic": "orders-multi",
+      "partition": 1,
+      "low": 0,
+      "high": 3,
+      "start": 0,
+      "end": 3
+    },
+    {
+      "topic": "orders-multi",
+      "partition": 2,
+      "low": 0,
+      "high": 5,
+      "start": 0,
+      "end": 5
+    }
+  ],
+  "summary": {
+    "read": 13,
+    "expected": 13,
+    "allRead": true,
+    "sumMatches": true,
+    "byVerdict": {
+      "Allowed": 5,
+      "Skipped": 2,
+      "ConversionError": 1,
+      "Rejected": 5
+    },
+    "byReason": {
+      "Ok": 5,
+      "NotOurEvent": 2,
+      "InvalidPayload": 1,
+      "MissingEventType": 1,
+      "EmptyHeader": 1,
+      "InvalidHeaderEncoding": 1,
+      "DuplicateHeader": 1,
+      "UnknownVersion": 1
+    },
+    "byEventType": {
+      "OrderCreated": {
+        "Allowed": 4,
+        "ConversionError": 1,
+        "Rejected": 2
+      },
+      "CourierAssigned": {
+        "Skipped": 1
+      },
+      "—": {
+        "Rejected": 2
+      },
+      "\u003Cне UTF-8: FFFE\u003E": {
+        "Rejected": 1
+      },
+      "OrderCancelled": {
+        "Allowed": 1
+      },
+      "PaymentCaptured": {
+        "Skipped": 1
+      }
+    }
+  },
+  "records": [
+    {
+      "partition": 0,
+      "offset": 0,
+      "timestamp": "2026-10-05T18:23:51.317+03:00",
+      "timestampType": "CreateTime",
+      "outsideWindow": false,
+      "key": "102",
+      "headers": [
+        {
+          "key": "eventType",
+          "value": "OrderCreated",
+          "hex": "4F7264657243726561746564"
+        },
+        {
+          "key": "version",
+          "value": "1",
+          "hex": "31"
+        }
+      ],
+      "payload": "{\u0022orderId\u0022:102,\u0022amount\u0022:300}",
+      "sha256": "5c069b114f4dae16df6d28c7291d2a1db8cbbfab0471fc10d5dde67465d22f04",
+      "eventType": "OrderCreated",
+      "verdict": "Allowed",
+      "reason": "Ok",
+      "details": "OrderCreated v1 → OrderCreatedV1",
+      "resultJson": "{\u0022orderId\u0022:102,\u0022amount\u0022:300}"
+    },
+    {
+      "partition": 0,
+      "offset": 1,
+      "timestamp": "2026-10-05T18:23:51.327+03:00",
+      "timestampType": "CreateTime",
+      "outsideWindow": false,
+      "key": "103",
+      "headers": [
+        {
+          "key": "eventType",
+          "value": "OrderCreated",
+          "hex": "4F7264657243726561746564"
+        },
+        {
+          "key": "version",
+          "value": "2",
+          "hex": "32"
+        }
+      ],
+      "payload": "{\u0022orderId\u0022:103,\u0022amount\u0022:700,\u0022currency\u0022:\u0022RUB\u0022}",
+      "sha256": "11f865a63f48b9877ef9ec5693dce6e42c7b72a03614384e7d622467a8306dd3",
+      "eventType": "OrderCreated",
+      "verdict": "Allowed",
+      "reason": "Ok",
+      "details": "OrderCreated v2 → OrderCreatedV2",
+      "resultJson": "{\u0022orderId\u0022:103,\u0022amount\u0022:700,\u0022currency\u0022:\u0022RUB\u0022}"
+    },
+    {
+      "partition": 0,
+      "offset": 2,
+      "timestamp": "2026-10-05T18:23:51.355+03:00",
+      "timestampType": "CreateTime",
+      "outsideWindow": false,
+      "key": "102",
+      "headers": [
+        {
+          "key": "eventType",
+          "value": "CourierAssigned",
+          "hex": "436F757269657241737369676E6564"
+        }
+      ],
+      "payload": "{\u0022courierId\u0022:7,\u0022orderId\u0022:102}",
+      "sha256": "3874d763b70e12711980e8e3aba5496818ea9dece5d6c67566e83e1cf407601d",
+      "eventType": "CourierAssigned",
+      "verdict": "Skipped",
+      "reason": "NotOurEvent",
+      "details": "CourierAssigned — чужой тип",
+      "resultJson": null
+    },
+    {
+      "partition": 0,
+      "offset": 3,
+      "timestamp": "2026-10-05T18:23:51.363+03:00",
+      "timestampType": "CreateTime",
+      "outsideWindow": false,
+      "key": "104",
+      "headers": [
+        {
+          "key": "eventType",
+          "value": "OrderCreated",
+          "hex": "4F7264657243726561746564"
+        },
+        {
+          "key": "version",
+          "value": "1",
+          "hex": "31"
+        }
+      ],
+      "payload": "{\u0022orderId\u0022:104,\u0022amount\u0022:",
+      "sha256": "816daf4d235868f13fbadc0fbdfb2f01c6bc92ef348227ccc83ca7ea4bd982a8",
+      "eventType": "OrderCreated",
+      "verdict": "ConversionError",
+      "reason": "InvalidPayload",
+      "details": "Expected depth to be zero at the end of the JSON payload. There is an open JSON object or array that should be closed. Path: $.amount | LineNumber: 0 | BytePositionInLine: 24.",
+      "resultJson": null
+    },
+    {
+      "partition": 0,
+      "offset": 4,
+      "timestamp": "2026-10-05T18:23:51.38+03:00",
+      "timestampType": "CreateTime",
+      "outsideWindow": false,
+      "key": "106",
+      "headers": [
+        {
+          "key": "version",
+          "value": "1",
+          "hex": "31"
+        }
+      ],
+      "payload": "{\u0022orderId\u0022:106,\u0022amount\u0022:100}",
+      "sha256": "3bfdd412b4878c82d7c1c03ea873e38eaca3959b4fc6c806a096ab1f0e90b137",
+      "eventType": null,
+      "verdict": "Rejected",
+      "reason": "MissingEventType",
+      "details": "нет заголовка eventType",
+      "resultJson": null
+    },
+    {
+      "partition": 1,
+      "offset": 0,
+      "timestamp": "2026-10-05T18:23:51.389+03:00",
+      "timestampType": "CreateTime",
+      "outsideWindow": false,
+      "key": "107",
+      "headers": [
+        {
+          "key": "eventType",
+          "value": "",
+          "hex": ""
+        },
+        {
+          "key": "version",
+          "value": "1",
+          "hex": "31"
+        }
+      ],
+      "payload": "{\u0022orderId\u0022:107,\u0022amount\u0022:100}",
+      "sha256": "1f94634668d5ad50eac74a0d90f3f8e823ed622841b681af951adba0e50b62f2",
+      "eventType": null,
+      "verdict": "Rejected",
+      "reason": "EmptyHeader",
+      "details": "заголовок eventType пустой",
+      "resultJson": null
+    },
+    {
+      "partition": 1,
+      "offset": 1,
+      "timestamp": "2026-10-05T18:23:51.397+03:00",
+      "timestampType": "CreateTime",
+      "outsideWindow": false,
+      "key": "108",
+      "headers": [
+        {
+          "key": "eventType",
+          "value": "\u003Cне UTF-8: FFFE\u003E",
+          "hex": "FFFE"
+        },
+        {
+          "key": "version",
+          "value": "1",
+          "hex": "31"
+        }
+      ],
+      "payload": "{\u0022orderId\u0022:108,\u0022amount\u0022:100}",
+      "sha256": "e789c08a577cd267536deb398cfaa379f56aaefece1efea637d995630dca4c3f",
+      "eventType": "\u003Cне UTF-8: FFFE\u003E",
+      "verdict": "Rejected",
+      "reason": "InvalidHeaderEncoding",
+      "details": "заголовок eventType не UTF-8: FFFE",
+      "resultJson": null
+    },
+    {
+      "partition": 1,
+      "offset": 2,
+      "timestamp": "2026-10-05T18:23:51.406+03:00",
+      "timestampType": "CreateTime",
+      "outsideWindow": false,
+      "key": "109",
+      "headers": [
+        {
+          "key": "eventType",
+          "value": "OrderCreated",
+          "hex": "4F7264657243726561746564"
+        },
+        {
+          "key": "version",
+          "value": "1",
+          "hex": "31"
+        },
+        {
+          "key": "eventType",
+          "value": "OrderCancelled",
+          "hex": "4F7264657243616E63656C6C6564"
+        }
+      ],
+      "payload": "{\u0022orderId\u0022:109,\u0022amount\u0022:100}",
+      "sha256": "8ca3d1e79eb6b8dde7e84f0ef8112d0ddeb528ec545868af853a0be5f9c35278",
+      "eventType": "OrderCreated",
+      "verdict": "Rejected",
+      "reason": "DuplicateHeader",
+      "details": "заголовок eventType повторяется с разными значениями: OrderCreated, OrderCancelled",
+      "resultJson": null
+    },
+    {
+      "partition": 2,
+      "offset": 0,
+      "timestamp": "2026-10-05T18:23:51.259+03:00",
+      "timestampType": "CreateTime",
+      "outsideWindow": false,
+      "key": "101",
+      "headers": [
+        {
+          "key": "eventType",
+          "value": "OrderCreated",
+          "hex": "4F7264657243726561746564"
+        },
+        {
+          "key": "version",
+          "value": "1",
+          "hex": "31"
+        }
+      ],
+      "payload": "{\u0022orderId\u0022:101,\u0022amount\u0022:500}",
+      "sha256": "a874b6ff2b0f7c3d06c1b9c537745fe4785db451480aaca540c7c32a7e6e12c2",
+      "eventType": "OrderCreated",
+      "verdict": "Allowed",
+      "reason": "Ok",
+      "details": "OrderCreated v1 → OrderCreatedV1",
+      "resultJson": "{\u0022orderId\u0022:101,\u0022amount\u0022:500}"
+    },
+    {
+      "partition": 2,
+      "offset": 1,
+      "timestamp": "2026-10-05T18:23:51.337+03:00",
+      "timestampType": "CreateTime",
+      "outsideWindow": false,
+      "key": "101",
+      "headers": [
+        {
+          "key": "eventType",
+          "value": "OrderCancelled",
+          "hex": "4F7264657243616E63656C6C6564"
+        },
+        {
+          "key": "version",
+          "value": "1",
+          "hex": "31"
+        }
+      ],
+      "payload": "{\u0022orderId\u0022:101,\u0022reason\u0022:\u0022client\u0022}",
+      "sha256": "48757004ffa7565f462dc488566bd5581f7b60c059154f2ed59a1235536519b3",
+      "eventType": "OrderCancelled",
+      "verdict": "Allowed",
+      "reason": "Ok",
+      "details": "OrderCancelled v1 → OrderCancelledV1",
+      "resultJson": "{\u0022orderId\u0022:101,\u0022reason\u0022:\u0022client\u0022}"
+    },
+    {
+      "partition": 2,
+      "offset": 2,
+      "timestamp": "2026-10-05T18:23:51.346+03:00",
+      "timestampType": "CreateTime",
+      "outsideWindow": false,
+      "key": "101",
+      "headers": [
+        {
+          "key": "eventType",
+          "value": "PaymentCaptured",
+          "hex": "5061796D656E744361707475726564"
+        },
+        {
+          "key": "version",
+          "value": "1",
+          "hex": "31"
+        }
+      ],
+      "payload": "{\u0022paymentId\u0022:9001,\u0022orderId\u0022:101}",
+      "sha256": "d7dc21da1ea1baabc5e94d7277494f47ae3a1b48a9a0c3ad345ce75f70390e9f",
+      "eventType": "PaymentCaptured",
+      "verdict": "Skipped",
+      "reason": "NotOurEvent",
+      "details": "PaymentCaptured — чужой тип",
+      "resultJson": null
+    },
+    {
+      "partition": 2,
+      "offset": 3,
+      "timestamp": "2026-10-05T18:23:51.371+03:00",
+      "timestampType": "CreateTime",
+      "outsideWindow": false,
+      "key": "105",
+      "headers": [
+        {
+          "key": "eventType",
+          "value": "OrderCreated",
+          "hex": "4F7264657243726561746564"
+        },
+        {
+          "key": "version",
+          "value": "3",
+          "hex": "33"
+        }
+      ],
+      "payload": "{\u0022orderId\u0022:105,\u0022amount\u0022:100}",
+      "sha256": "30ca71611f6a263ec09dfbc792ee98ff5c40882bcf7747bd4a70d44dfb5aa8eb",
+      "eventType": "OrderCreated",
+      "verdict": "Rejected",
+      "reason": "UnknownVersion",
+      "details": "OrderCreated v3 нет в каталоге",
+      "resultJson": null
+    },
+    {
+      "partition": 2,
+      "offset": 4,
+      "timestamp": "2026-10-05T18:23:51.415+03:00",
+      "timestampType": "CreateTime",
+      "outsideWindow": false,
+      "key": "110",
+      "headers": [
+        {
+          "key": "eventType",
+          "value": "OrderCreated",
+          "hex": "4F7264657243726561746564"
+        },
+        {
+          "key": "version",
+          "value": "1",
+          "hex": "31"
+        },
+        {
+          "key": "eventType",
+          "value": "OrderCreated",
+          "hex": "4F7264657243726561746564"
+        }
+      ],
+      "payload": "{\u0022orderId\u0022:110,\u0022amount\u0022:100}",
+      "sha256": "6684162027e27c453e6fad6d449d4aa1348bb57899628ed2d3900903e0d3c3fd",
+      "eventType": "OrderCreated",
+      "verdict": "Allowed",
+      "reason": "Ok",
+      "details": "OrderCreated v1 → OrderCreatedV1",
+      "resultJson": "{\u0022orderId\u0022:110,\u0022amount\u0022:100}"
+    }
+  ]
+}
