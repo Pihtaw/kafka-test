@@ -2,19 +2,24 @@ using System.Text.Json;
 
 namespace MessageCheck;
 
-// проверки: 1) заголовки → 2) каталог → 3) модуль преобразования → 4) проверка ответа → решение.
+// проверка на чужое событие
 public class Processor(EventCatalog catalog, IConverter converter, TimeSpan timeout)
 {
     public async Task<Decision> ProcessAsync(KafkaRecord record)
     {
-        if (!record.Headers.TryGetValue("eventType", out var eventType) || string.IsNullOrWhiteSpace(eventType))
-            return new Decision(Verdict.Rejected, Reason.MissingEventType, "нет заголовка eventType");
+        // UTF-8 без повторов
+        if (!HeaderReader.TryRead(record.Headers, "eventType", Reason.MissingEventType, out var eventType, out var fail))
+            return fail!;
 
-        if (!record.Headers.TryGetValue("version", out var version) || string.IsNullOrWhiteSpace(version))
-            return new Decision(Verdict.Rejected, Reason.MissingVersion, "нет заголовка version");
+        // чужое событие
+        if (!catalog.Knows(eventType))
+            return new Decision(Verdict.Skipped, Reason.NotOurEvent, $"{eventType} — чужой тип");
+
+        if (!HeaderReader.TryRead(record.Headers, "version", Reason.MissingVersion, out var version, out fail))
+            return fail!;
 
         if (!catalog.TryGet(eventType, version, out var dtoType))
-            return new Decision(Verdict.Rejected, Reason.UnknownEvent, $"{eventType} v{version} нет в каталоге");
+            return new Decision(Verdict.Rejected, Reason.UnknownVersion, $"{eventType} v{version} нет в каталоге");
 
         object? result;
         try
@@ -24,17 +29,14 @@ public class Processor(EventCatalog catalog, IConverter converter, TimeSpan time
         }
         catch (Exception ex) when (ex is TimeoutException or OperationCanceledException)
         {
-            // модуль не успел.
             return new Decision(Verdict.ConversionError, Reason.ModuleTimeout, $"модуль не ответил за {timeout.TotalMilliseconds} мс");
         }
         catch (JsonException ex)
         {
-            // плохие данные, модуль хорошо
             return new Decision(Verdict.ConversionError, Reason.InvalidPayload, ex.Message);
         }
         catch (Exception ex)
         {
-            // иначе
             return new Decision(Verdict.ConversionError, Reason.ModuleCrashed, $"{ex.GetType().Name}: {ex.Message}");
         }
 

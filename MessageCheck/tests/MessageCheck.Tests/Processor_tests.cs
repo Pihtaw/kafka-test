@@ -1,29 +1,41 @@
+using System.Text;
 using System.Text.Json;
 using MessageCheck;
 
 namespace MessageCheck.Tests;
 
+// текст или байты в base64, valueBase64 для не UTF-8
+public record FixtureHeader(string Key, string? Value = null, string? ValueBase64 = null)
+{
+    public Header ToHeader() => new(Key,
+        ValueBase64 is not null ? Convert.FromBase64String(ValueBase64)
+        : Value is not null ? Encoding.UTF8.GetBytes(Value)
+        : null);
+}
+
 public record FixtureCase(
     string Name,
-    Dictionary<string, string> Headers,
+    List<FixtureHeader> Headers,
     string Payload,
     string ExpectedVerdict,
     string ExpectedReason)
 {
     public override string ToString() => Name;
+
+    public KafkaRecord ToRecord() =>
+        new(Headers.Select(h => h.ToHeader()).ToList(), null, Encoding.UTF8.GetBytes(Payload));
 }
 
 public class ProcessorTests
 {
     // валидное сообщение
     private static readonly KafkaRecord ValidRecord = new(
-        new() { ["eventType"] = "OrderCreated", ["version"] = "1" },
-        "order-1",
-        """{"orderId":1,"amount":500}""");
+        [new Header("eventType", "OrderCreated"u8.ToArray()), new Header("version", "1"u8.ToArray())],
+        "order-1"u8.ToArray(),
+        """{"orderId":1,"amount":500}"""u8.ToArray());
 
     private static Processor MakeProcessor(IConverter converter)
         => new(EventCatalog.Default(), converter, TimeSpan.FromMilliseconds(500));
-
 
     public static IEnumerable<object[]> Fixtures()
     {
@@ -36,9 +48,7 @@ public class ProcessorTests
     [MemberData(nameof(Fixtures))]
     public async Task Fixture_gives_expected_decision_and_reason(FixtureCase c)
     {
-        var processor = MakeProcessor(new JsonModule());
-
-        var decision = await processor.ProcessAsync(new KafkaRecord(c.Headers, null, c.Payload));
+        var decision = await MakeProcessor(new JsonModule()).ProcessAsync(c.ToRecord());
 
         Assert.Equal(c.ExpectedVerdict, decision.Verdict.ToString());
         Assert.Equal(c.ExpectedReason, decision.Reason.ToString());
@@ -82,7 +92,6 @@ public class ProcessorTests
     }
 
     // есть JSON после преобразования
-
     [Fact]
     public async Task Allowed_record_has_result_json()
     {
