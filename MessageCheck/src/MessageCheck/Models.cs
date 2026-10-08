@@ -6,7 +6,7 @@ public record Header(string Key, byte[]? Value);
 public record KafkaRecord(
     IReadOnlyList<Header> Headers,
     byte[]? Key,
-    byte[] Payload);
+    byte[]? Payload);
 
 public enum Verdict
 {
@@ -29,7 +29,8 @@ public enum Reason
     InvalidPayload,
     ModuleTimeout,
     ModuleCrashed,
-    ModuleInvalidResponse
+    ModuleInvalidResponse,
+    Tombstone
 }
 
 public record Decision(

@@ -7,6 +7,9 @@ public class Processor(EventCatalog catalog, IConverter converter, TimeSpan time
 {
     public async Task<Decision> ProcessAsync(KafkaRecord record)
     {
+        if (record.Payload is null)
+            return new Decision(Verdict.Skipped, Reason.Tombstone, "value = null: tombstone, не событие");
+
         // UTF-8 без повторов
         if (!HeaderReader.TryRead(record.Headers, "eventType", Reason.MissingEventType, out var eventType, out var fail))
             return fail!;
@@ -24,6 +27,7 @@ public class Processor(EventCatalog catalog, IConverter converter, TimeSpan time
         object? result;
         try
         {
+            // TODO: ConvertAsync сейчас синхронный, проверить на настоящем
             using var cts = new CancellationTokenSource(timeout);
             result = await converter.ConvertAsync(record.Payload, dtoType, cts.Token).WaitAsync(timeout);
         }

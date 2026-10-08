@@ -29,7 +29,7 @@ static Headers H(params (string Key, byte[]? Value)[] items)
 static byte[] T(string s) => Encoding.UTF8.GetBytes(s);
 static Headers Ev(string type, string version) => H(("eventType", T(type)), ("version", T(version)));
 
-var messages = new (string Key, Headers Headers, string Payload, string Comment)[]
+var messages = new (string Key, Headers Headers, string? Payload, string Comment)[]
 {
     ("101", Ev("OrderCreated", "1"),   """{"orderId":101,"amount":500}""",                    "наше, валидное"),
     ("102", Ev("OrderCreated", "1"),   """{"orderId":102,"amount":300}""",                    "наше, валидное"),
@@ -45,7 +45,9 @@ var messages = new (string Key, Headers Headers, string Payload, string Comment)
     ("109", H(("eventType", T("OrderCreated")), ("version", T("1")), ("eventType", T("OrderCancelled"))),
                                        """{"orderId":109,"amount":100}""",                    "битое: eventType дважды, разные"),
     ("110", H(("eventType", T("OrderCreated")), ("version", T("1")), ("eventType", T("OrderCreated"))),
-                                       """{"orderId":110,"amount":100}""",                    "eventType дважды, одинаковые"),
+                                       """{"orderId":110,"amount":100}""",                    "битое: eventType дважды, одинаковые"),
+    ("111", Ev("OrderCreated", "1"),   null,                                                  "tombstone (value = null)"),
+    ("112", Ev("OrderCreated", "1"),   "",                                                    "битое: пустое тело"),
 };
 
 using var producer = new ProducerBuilder<string, string>(new ProducerConfig { BootstrapServers = bootstrap, Acks = Acks.All }).Build();
@@ -53,10 +55,12 @@ using var producer = new ProducerBuilder<string, string>(new ProducerConfig { Bo
 var before = DateTimeOffset.Now;
 foreach (var m in messages)
 {
-    var r = await producer.ProduceAsync(topic, new Message<string, string> { Key = m.Key, Value = m.Payload, Headers = m.Headers });
+    var r = await producer.ProduceAsync(topic, new Message<string, string> { Key = m.Key, Value = m.Payload!, Headers = m.Headers });
     Console.WriteLine($"p{r.Partition.Value} o{r.Offset.Value} key={m.Key,-4} {m.Comment}");
 }
 var after = DateTimeOffset.Now.AddSeconds(1);
 
 Console.WriteLine($"\nОтправлено {messages.Length} сообщений. Прогнать dry-run по ним:");
-Console.WriteLine($"  cd ../DryRun && dotnet run -- {topic} \"{before:yyyy-MM-dd HH:mm:ss}\" \"{after:yyyy-MM-dd HH:mm:ss}\"");
+const string timeFormat = "yyyy-MM-dd HH:mm:sszzz";
+var inv = System.Globalization.CultureInfo.InvariantCulture;
+Console.WriteLine($"  cd ../DryRun && dotnet run -- {topic} \"{before.ToString(timeFormat, inv)}\" \"{after.ToString(timeFormat, inv)}\"");

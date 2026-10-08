@@ -2,63 +2,67 @@
   "mode": "dry-run (ничего не отправлялось)",
   "topic": "orders-multi",
   "window": {
-    "from": "2026-10-05T18:23:51+03:00",
-    "to": "2026-10-05T18:23:52+03:00",
-    "fromMs": 1791213831000,
-    "toMs": 1791213832000
+    "from": "2026-10-08T08:54:36+03:00",
+    "to": "2026-10-08T08:54:37+03:00",
+    "fromMs": 1791438876000,
+    "toMs": 1791438877000
   },
   "partitions": [
     {
       "topic": "orders-multi",
       "partition": 0,
       "low": 0,
-      "high": 5,
-      "start": 0,
-      "end": 5
+      "high": 10,
+      "start": 5,
+      "end": 10
     },
     {
       "topic": "orders-multi",
       "partition": 1,
       "low": 0,
-      "high": 3,
-      "start": 0,
-      "end": 3
+      "high": 7,
+      "start": 3,
+      "end": 7
     },
     {
       "topic": "orders-multi",
       "partition": 2,
       "low": 0,
-      "high": 5,
-      "start": 0,
-      "end": 5
+      "high": 11,
+      "start": 5,
+      "end": 11
     }
   ],
   "summary": {
-    "read": 13,
-    "expected": 13,
+    "read": 15,
+    "offsetsInRange": 15,
+    "gaps": 0,
+    "partitionsFinished": 3,
     "allRead": true,
     "sumMatches": true,
     "byVerdict": {
-      "Allowed": 5,
-      "Skipped": 2,
-      "ConversionError": 1,
-      "Rejected": 5
+      "Allowed": 4,
+      "Skipped": 3,
+      "ConversionError": 2,
+      "Rejected": 6
     },
     "byReason": {
-      "Ok": 5,
+      "Ok": 4,
       "NotOurEvent": 2,
-      "InvalidPayload": 1,
+      "InvalidPayload": 2,
       "MissingEventType": 1,
       "EmptyHeader": 1,
       "InvalidHeaderEncoding": 1,
-      "DuplicateHeader": 1,
-      "UnknownVersion": 1
+      "DuplicateHeader": 2,
+      "UnknownVersion": 1,
+      "Tombstone": 1
     },
     "byEventType": {
       "OrderCreated": {
-        "Allowed": 4,
-        "ConversionError": 1,
-        "Rejected": 2
+        "Allowed": 3,
+        "ConversionError": 2,
+        "Rejected": 3,
+        "Skipped": 1
       },
       "CourierAssigned": {
         "Skipped": 1
@@ -80,8 +84,8 @@
   "records": [
     {
       "partition": 0,
-      "offset": 0,
-      "timestamp": "2026-10-05T18:23:51.317+03:00",
+      "offset": 5,
+      "timestamp": "2026-10-08T08:54:36.318+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "102",
@@ -107,8 +111,8 @@
     },
     {
       "partition": 0,
-      "offset": 1,
-      "timestamp": "2026-10-05T18:23:51.327+03:00",
+      "offset": 6,
+      "timestamp": "2026-10-08T08:54:36.326+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "103",
@@ -134,8 +138,8 @@
     },
     {
       "partition": 0,
-      "offset": 2,
-      "timestamp": "2026-10-05T18:23:51.355+03:00",
+      "offset": 7,
+      "timestamp": "2026-10-08T08:54:36.349+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "102",
@@ -156,8 +160,8 @@
     },
     {
       "partition": 0,
-      "offset": 3,
-      "timestamp": "2026-10-05T18:23:51.363+03:00",
+      "offset": 8,
+      "timestamp": "2026-10-08T08:54:36.357+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "104",
@@ -183,8 +187,8 @@
     },
     {
       "partition": 0,
-      "offset": 4,
-      "timestamp": "2026-10-05T18:23:51.38+03:00",
+      "offset": 9,
+      "timestamp": "2026-10-08T08:54:36.372+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "106",
@@ -205,8 +209,8 @@
     },
     {
       "partition": 1,
-      "offset": 0,
-      "timestamp": "2026-10-05T18:23:51.389+03:00",
+      "offset": 3,
+      "timestamp": "2026-10-08T08:54:36.379+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "107",
@@ -232,8 +236,8 @@
     },
     {
       "partition": 1,
-      "offset": 1,
-      "timestamp": "2026-10-05T18:23:51.397+03:00",
+      "offset": 4,
+      "timestamp": "2026-10-08T08:54:36.387+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "108",
@@ -259,8 +263,8 @@
     },
     {
       "partition": 1,
-      "offset": 2,
-      "timestamp": "2026-10-05T18:23:51.406+03:00",
+      "offset": 5,
+      "timestamp": "2026-10-08T08:54:36.394+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "109",
@@ -286,13 +290,40 @@
       "eventType": "OrderCreated",
       "verdict": "Rejected",
       "reason": "DuplicateHeader",
-      "details": "заголовок eventType повторяется с разными значениями: OrderCreated, OrderCancelled",
+      "details": "заголовок eventType встречается 2 раза",
+      "resultJson": null
+    },
+    {
+      "partition": 1,
+      "offset": 6,
+      "timestamp": "2026-10-08T08:54:36.416+03:00",
+      "timestampType": "CreateTime",
+      "outsideWindow": false,
+      "key": "112",
+      "headers": [
+        {
+          "key": "eventType",
+          "value": "OrderCreated",
+          "hex": "4F7264657243726561746564"
+        },
+        {
+          "key": "version",
+          "value": "1",
+          "hex": "31"
+        }
+      ],
+      "payload": "",
+      "sha256": "025a036d58eba14f86fce8e85917c7947ec5af302b516777f2a6d4ebe3ed30fe",
+      "eventType": "OrderCreated",
+      "verdict": "ConversionError",
+      "reason": "InvalidPayload",
+      "details": "The input does not contain any JSON tokens. Expected the input to start with a valid JSON token, when isFinalBlock is true. Path: $ | LineNumber: 0 | BytePositionInLine: 0.",
       "resultJson": null
     },
     {
       "partition": 2,
-      "offset": 0,
-      "timestamp": "2026-10-05T18:23:51.259+03:00",
+      "offset": 5,
+      "timestamp": "2026-10-08T08:54:36.276+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "101",
@@ -318,8 +349,8 @@
     },
     {
       "partition": 2,
-      "offset": 1,
-      "timestamp": "2026-10-05T18:23:51.337+03:00",
+      "offset": 6,
+      "timestamp": "2026-10-08T08:54:36.334+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "101",
@@ -345,8 +376,8 @@
     },
     {
       "partition": 2,
-      "offset": 2,
-      "timestamp": "2026-10-05T18:23:51.346+03:00",
+      "offset": 7,
+      "timestamp": "2026-10-08T08:54:36.342+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "101",
@@ -372,8 +403,8 @@
     },
     {
       "partition": 2,
-      "offset": 3,
-      "timestamp": "2026-10-05T18:23:51.371+03:00",
+      "offset": 8,
+      "timestamp": "2026-10-08T08:54:36.364+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "105",
@@ -399,8 +430,8 @@
     },
     {
       "partition": 2,
-      "offset": 4,
-      "timestamp": "2026-10-05T18:23:51.415+03:00",
+      "offset": 9,
+      "timestamp": "2026-10-08T08:54:36.401+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "110",
@@ -424,10 +455,37 @@
       "payload": "{\u0022orderId\u0022:110,\u0022amount\u0022:100}",
       "sha256": "6684162027e27c453e6fad6d449d4aa1348bb57899628ed2d3900903e0d3c3fd",
       "eventType": "OrderCreated",
-      "verdict": "Allowed",
-      "reason": "Ok",
-      "details": "OrderCreated v1 → OrderCreatedV1",
-      "resultJson": "{\u0022orderId\u0022:110,\u0022amount\u0022:100}"
+      "verdict": "Rejected",
+      "reason": "DuplicateHeader",
+      "details": "заголовок eventType встречается 2 раза",
+      "resultJson": null
+    },
+    {
+      "partition": 2,
+      "offset": 10,
+      "timestamp": "2026-10-08T08:54:36.409+03:00",
+      "timestampType": "CreateTime",
+      "outsideWindow": false,
+      "key": "111",
+      "headers": [
+        {
+          "key": "eventType",
+          "value": "OrderCreated",
+          "hex": "4F7264657243726561746564"
+        },
+        {
+          "key": "version",
+          "value": "1",
+          "hex": "31"
+        }
+      ],
+      "payload": null,
+      "sha256": "a2178973bd16b223d362eb796205f94021afde84a4e2666ee3498a52d75db1d7",
+      "eventType": "OrderCreated",
+      "verdict": "Skipped",
+      "reason": "Tombstone",
+      "details": "value = null: tombstone, не событие",
+      "resultJson": null
     }
   ]
 }

@@ -16,14 +16,14 @@ public record FixtureHeader(string Key, string? Value = null, string? ValueBase6
 public record FixtureCase(
     string Name,
     List<FixtureHeader> Headers,
-    string Payload,
+    string? Payload,
     string ExpectedVerdict,
     string ExpectedReason)
 {
     public override string ToString() => Name;
 
     public KafkaRecord ToRecord() =>
-        new(Headers.Select(h => h.ToHeader()).ToList(), null, Encoding.UTF8.GetBytes(Payload));
+        new(Headers.Select(h => h.ToHeader()).ToList(), null, Payload is null ? null : Encoding.UTF8.GetBytes(Payload));
 }
 
 public class ProcessorTests

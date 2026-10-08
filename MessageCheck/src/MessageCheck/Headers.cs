@@ -20,6 +20,13 @@ public static class HeaderReader
             return false;
         }
 
+        // теперь повтор заголовка — всегда отказ, даже если значения одинаковые:
+        if (found.Count > 1)
+        {
+            fail = new Decision(Verdict.Rejected, Reason.DuplicateHeader, $"заголовок {name} встречается {found.Count} раза");
+            return false;
+        }
+
         // проверка на пустоту и UTF-8
         var values = new List<string>();
         foreach (var h in found)
@@ -47,17 +54,7 @@ public static class HeaderReader
             values.Add(text);
         }
 
-        // повторы .net берет последнее, другой клиент не знаем - тогда отказ
-        // повторы одинаковые - пропускаем
-        var distinct = values.Distinct().ToList();
-        if (distinct.Count > 1)
-        {
-            fail = new Decision(Verdict.Rejected, Reason.DuplicateHeader,
-                $"заголовок {name} повторяется с разными значениями: {string.Join(", ", distinct)}");
-            return false;
-        }
-
-        value = distinct[0];
+        value = values[0];
         return true;
     }
 }

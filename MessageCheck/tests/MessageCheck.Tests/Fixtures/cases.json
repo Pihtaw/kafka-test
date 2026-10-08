@@ -171,8 +171,8 @@
       }
     ],
     "payload": "{\"orderId\":16,\"amount\":100}",
-    "expectedVerdict": "Allowed",
-    "expectedReason": "Ok"
+    "expectedVerdict": "Rejected",
+    "expectedReason": "DuplicateHeader"
   },
   {
     "name": "чужое событие мультитопика",
@@ -299,7 +299,7 @@
     "expectedReason": "InvalidPayload"
   },
   {
-    "name": "пустое тело",
+    "name": "пустое тело (не tombstone)",
     "headers": [
       {
         "key": "eventType",
@@ -313,5 +313,64 @@
     "payload": "",
     "expectedVerdict": "ConversionError",
     "expectedReason": "InvalidPayload"
+  },
+  {
+    "name": "version дважды с одинаковым значением",
+    "headers": [
+      {
+        "key": "eventType",
+        "value": "OrderCreated"
+      },
+      {
+        "key": "version",
+        "value": "1"
+      },
+      {
+        "key": "version",
+        "value": "1"
+      }
+    ],
+    "payload": "{\"orderId\":17,\"amount\":100}",
+    "expectedVerdict": "Rejected",
+    "expectedReason": "DuplicateHeader"
+  },
+  {
+    "name": "eventType в другом регистре",
+    "headers": [
+      {
+        "key": "eventType",
+        "value": "orderCreated"
+      },
+      {
+        "key": "version",
+        "value": "1"
+      }
+    ],
+    "payload": "{\"orderId\":18,\"amount\":100}",
+    "expectedVerdict": "Allowed",
+    "expectedReason": "Ok"
+  },
+  {
+    "name": "tombstone с заголовками",
+    "headers": [
+      {
+        "key": "eventType",
+        "value": "OrderCreated"
+      },
+      {
+        "key": "version",
+        "value": "1"
+      }
+    ],
+    "payload": null,
+    "expectedVerdict": "Skipped",
+    "expectedReason": "Tombstone"
+  },
+  {
+    "name": "tombstone без заголовков",
+    "headers": [],
+    "payload": null,
+    "expectedVerdict": "Skipped",
+    "expectedReason": "Tombstone"
   }
 ]
