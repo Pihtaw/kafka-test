@@ -1,0 +1,11 @@
+# Как контракт OrderCreated менялся от версии к версии.
+# v1 — полный список полей; дальше: +поле:тип добавили, -поле удалили, ~поле:тип поменяли тип.
+
+contract OrderCreated
+
+v1 OrderId:string Amount:int Quantity:int Comment:string
+v2 +Currency:string      # добавили поле
+v3 -Comment              # удалили поле
+v4 ~Quantity:long        # int -> long: в JSON это тот же number, но большие значения не влезут в int
+v5 ~Amount:double        # int -> double: дробные значения не прочитать в int
+v6 ~OrderId:int          # string -> int: сменился тип в самом JSON (string -> number)
