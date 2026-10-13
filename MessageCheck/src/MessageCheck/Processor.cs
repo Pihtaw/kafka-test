@@ -50,5 +50,14 @@ public class Processor(EventCatalog catalog, IConverter converter, TimeSpan time
             return new Decision(Verdict.ConversionError, Reason.ModuleInvalidResponse,
                 $"ожидали {dtoType.Name}, модуль вернул {result.GetType().Name}");
 
-            return new Decision(Verdict.Allowed, Reason.Ok, $"{eventType} ({versionText}) → {dtoType.Name}", JsonModule.ToJson(result));    }
-}
+        var resultJson = JsonModule.ToJson(result);
+        var details = $"{eventType} ({versionText}) → {dtoType.Name}";
+
+        // лишние поля не ошибка
+        // их пропускают настоящие потребители, но показываем их
+        var extra = JsonModule.ExtraFields(record.Payload, resultJson);
+        if (extra.Count > 0)
+            details += $"; лишние поля: {string.Join(", ", extra)}";
+
+        return new Decision(Verdict.Allowed, Reason.Ok, details, resultJson); }
+    }

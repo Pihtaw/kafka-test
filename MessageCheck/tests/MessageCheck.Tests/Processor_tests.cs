@@ -31,7 +31,7 @@ public class ProcessorTests
     // валидное сообщение
     private static readonly KafkaRecord ValidRecord = new(
         [new Header(HeaderNames.EventType, "MessageCheck.SampleContracts.OrderCreated"u8.ToArray()), new Header(HeaderNames.PackageVersion, "1.0.0"u8.ToArray())],        "order-1"u8.ToArray(),
-        """{"orderId":1,"amount":500}"""u8.ToArray());
+        """{"OrderId":1,"Amount":500}"""u8.ToArray());
 
     private static Processor MakeProcessor(IConverter converter)
         => new(EventCatalog.Default(), converter, TimeSpan.FromMilliseconds(500));
@@ -97,6 +97,18 @@ public class ProcessorTests
         var decision = await MakeProcessor(new JsonModule()).ProcessAsync(ValidRecord);
 
         Assert.True(decision.CanSend);
-        Assert.Equal("""{"orderId":1,"amount":500,"currency":null}""", decision.ResultJson);
+        Assert.Equal("""{"OrderId":1,"Amount":500,"Currency":null}""", decision.ResultJson);
+    }
+
+
+    [Fact]
+    public async Task Extra_fields_are_skipped_but_shown_in_details()
+    {
+        var record = ValidRecord with { Payload = """{"OrderId":1,"Amount":500,"Comment":"hi"}"""u8.ToArray() };
+
+        var decision = await MakeProcessor(new JsonModule()).ProcessAsync(record);
+
+        Assert.True(decision.CanSend);
+        Assert.Contains("лишние поля: Comment", decision.Details);
     }
 }

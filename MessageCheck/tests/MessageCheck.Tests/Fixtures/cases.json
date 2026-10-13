@@ -11,7 +11,7 @@
         "value": "1.0.0"
       }
     ],
-    "payload": "{\"orderId\":1,\"amount\":500}",
+    "payload": "{\"OrderId\":1,\"Amount\":500}",
     "expectedVerdict": "Allowed",
     "expectedReason": "Ok"
   },
@@ -27,7 +27,7 @@
         "value": "1.1.0"
       }
     ],
-    "payload": "{\"orderId\":2,\"amount\":700,\"currency\":\"RUB\"}",
+    "payload": "{\"OrderId\":2,\"Amount\":700,\"Currency\":\"RUB\"}",
     "expectedVerdict": "Allowed",
     "expectedReason": "Ok"
   },
@@ -43,7 +43,7 @@
         "value": "1.0.0"
       }
     ],
-    "payload": "{\"orderId\":1,\"reason\":\"client\"}",
+    "payload": "{\"OrderId\":1,\"Reason\":\"client\"}",
     "expectedVerdict": "Allowed",
     "expectedReason": "Ok"
   },
@@ -55,7 +55,7 @@
         "value": "1.0.0"
       }
     ],
-    "payload": "{\"orderId\":3,\"amount\":100}",
+    "payload": "{\"OrderId\":3,\"Amount\":100}",
     "expectedVerdict": "Rejected",
     "expectedReason": "MissingEventType"
   },
@@ -67,7 +67,7 @@
         "value": "MessageCheck.SampleContracts.OrderCreated"
       }
     ],
-    "payload": "{\"orderId\":4,\"amount\":100}",
+    "payload": "{\"OrderId\":4,\"Amount\":100}",
     "expectedVerdict": "Allowed",
     "expectedReason": "Ok"
   },
@@ -83,7 +83,7 @@
         "value": "1.0.0"
       }
     ],
-    "payload": "{\"orderId\":11,\"amount\":100}",
+    "payload": "{\"OrderId\":11,\"Amount\":100}",
     "expectedVerdict": "Rejected",
     "expectedReason": "EmptyHeader"
   },
@@ -99,7 +99,7 @@
         "value": "1.0.0"
       }
     ],
-    "payload": "{\"orderId\":12,\"amount\":100}",
+    "payload": "{\"OrderId\":12,\"Amount\":100}",
     "expectedVerdict": "Rejected",
     "expectedReason": "EmptyHeader"
   },
@@ -114,7 +114,7 @@
         "key": "Event-PackageVersion"
       }
     ],
-    "payload": "{\"orderId\":13,\"amount\":100}",
+    "payload": "{\"OrderId\":13,\"Amount\":100}",
     "expectedVerdict": "Rejected",
     "expectedReason": "EmptyHeader"
   },
@@ -130,7 +130,7 @@
         "value": "1.0.0"
       }
     ],
-    "payload": "{\"orderId\":14,\"amount\":100}",
+    "payload": "{\"OrderId\":14,\"Amount\":100}",
     "expectedVerdict": "Rejected",
     "expectedReason": "InvalidHeaderEncoding"
   },
@@ -150,7 +150,7 @@
         "value": "MessageCheck.SampleContracts.OrderCancelled"
       }
     ],
-    "payload": "{\"orderId\":15,\"amount\":100}",
+    "payload": "{\"OrderId\":15,\"Amount\":100}",
     "expectedVerdict": "Rejected",
     "expectedReason": "DuplicateHeader"
   },
@@ -170,7 +170,7 @@
         "value": "MessageCheck.SampleContracts.OrderCreated"
       }
     ],
-    "payload": "{\"orderId\":16,\"amount\":100}",
+    "payload": "{\"OrderId\":16,\"Amount\":100}",
     "expectedVerdict": "Rejected",
     "expectedReason": "DuplicateHeader"
   },
@@ -186,7 +186,7 @@
         "value": "1.0.0"
       }
     ],
-    "payload": "{\"paymentId\":5}",
+    "payload": "{\"PaymentId\":5}",
     "expectedVerdict": "Skipped",
     "expectedReason": "NotOurEvent"
   },
@@ -198,7 +198,7 @@
         "value": "Dodo.Delivery.Contracts.CourierAssigned"
       }
     ],
-    "payload": "{\"courierId\":7}",
+    "payload": "{\"CourierId\":7}",
     "expectedVerdict": "Skipped",
     "expectedReason": "NotOurEvent"
   },
@@ -214,7 +214,7 @@
         "value": "2.0.0"
       }
     ],
-    "payload": "{\"orderId\":6,\"amount\":100}",
+    "payload": "{\"OrderId\":6,\"Amount\":100}",
     "expectedVerdict": "Allowed",
     "expectedReason": "Ok"
   },
@@ -230,7 +230,7 @@
         "value": "1.0.0"
       }
     ],
-    "payload": "{\"orderId\":7,\"amount\":",
+    "payload": "{\"OrderId\":7,\"Amount\":",
     "expectedVerdict": "ConversionError",
     "expectedReason": "InvalidPayload"
   },
@@ -246,7 +246,7 @@
         "value": "1.0.0"
       }
     ],
-    "payload": "{\"orderId\":8,\"amount\":\"много\"}",
+    "payload": "{\"OrderId\":8,\"Amount\":\"много\"}",
     "expectedVerdict": "ConversionError",
     "expectedReason": "InvalidPayload"
   },
@@ -262,12 +262,12 @@
         "value": "1.1.0"
       }
     ],
-    "payload": "{\"orderId\":9,\"amount\":100}",
+    "payload": "{\"OrderId\":9,\"Amount\":100}",
     "expectedVerdict": "Allowed",
     "expectedReason": "Ok"
   },
   {
-    "name": "лишнее поле, которого нет в DTO",
+    "name": "лишнее поле, которого нет в DTO — пропускается, как у потребителей",
     "headers": [
       {
         "key": "Event-Type",
@@ -278,12 +278,12 @@
         "value": "1.0.0"
       }
     ],
-    "payload": "{\"orderId\":10,\"amount\":100,\"comment\":\"hi\"}",
-    "expectedVerdict": "ConversionError",
-    "expectedReason": "InvalidPayload"
+    "payload": "{\"OrderId\":10,\"Amount\":100,\"Comment\":\"hi\"}",
+    "expectedVerdict": "Allowed",
+    "expectedReason": "Ok"
   },
   {
-    "name": "OrderCancelled без reason",
+    "name": "OrderCancelled без Reason",
     "headers": [
       {
         "key": "Event-Type",
@@ -294,7 +294,7 @@
         "value": "1.0.0"
       }
     ],
-    "payload": "{\"orderId\":5}",
+    "payload": "{\"OrderId\":5}",
     "expectedVerdict": "ConversionError",
     "expectedReason": "InvalidPayload"
   },
@@ -330,7 +330,7 @@
         "value": "1.0.0"
       }
     ],
-    "payload": "{\"orderId\":17,\"amount\":100}",
+    "payload": "{\"OrderId\":17,\"Amount\":100}",
     "expectedVerdict": "Rejected",
     "expectedReason": "DuplicateHeader"
   },
@@ -346,7 +346,7 @@
         "value": "1.0.0"
       }
     ],
-    "payload": "{\"orderId\":18,\"amount\":100}",
+    "payload": "{\"OrderId\":18,\"Amount\":100}",
     "expectedVerdict": "Allowed",
     "expectedReason": "Ok"
   },
@@ -385,8 +385,24 @@
         "value": "1.0.0"
       }
     ],
-    "payload": "{\"orderId\":19,\"amount\":100}",
+    "payload": "{\"OrderId\":19,\"Amount\":100}",
     "expectedVerdict": "Skipped",
     "expectedReason": "NotOurEvent"
+  },
+  {
+    "name": "имена полей с маленькой буквы (orderId) — не совпадают с контрактом, обязательные поля не найдены",
+    "headers": [
+      {
+        "key": "Event-Type",
+        "value": "MessageCheck.SampleContracts.OrderCreated"
+      },
+      {
+        "key": "Event-PackageVersion",
+        "value": "1.0.0"
+      }
+    ],
+    "payload": "{\"orderId\":20,\"amount\":100}",
+    "expectedVerdict": "ConversionError",
+    "expectedReason": "InvalidPayload"
   }
 ]
