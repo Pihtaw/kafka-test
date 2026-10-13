@@ -11,14 +11,14 @@ public class Processor(EventCatalog catalog, IConverter converter, TimeSpan time
             return new Decision(Verdict.Skipped, Reason.Tombstone, "value = null: tombstone, не событие");
 
         // UTF-8 без повторов
-        if (!HeaderReader.TryRead(record.Headers, "eventType", Reason.MissingEventType, out var eventType, out var fail))
+        if (!HeaderReader.TryRead(record.Headers, HeadersNames.EventType, Reason.MissingEventType, out var eventType, out var fail))
             return fail!;
 
         // чужое событие
         if (!catalog.Knows(eventType))
             return new Decision(Verdict.Skipped, Reason.NotOurEvent, $"{eventType} — чужой тип");
 
-        if (!HeaderReader.TryRead(record.Headers, "version", Reason.MissingVersion, out var version, out fail))
+        if (!HeaderReader.TryRead(record.Headers, HeadersNames.PackageVersion, Reason.MissingVersion, out var version, out fail))
             return fail!;
 
         if (!catalog.TryGet(eventType, version, out var dtoType))

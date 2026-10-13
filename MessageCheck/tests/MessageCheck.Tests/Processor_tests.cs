@@ -30,7 +30,7 @@ public class ProcessorTests
 {
     // валидное сообщение
     private static readonly KafkaRecord ValidRecord = new(
-        [new Header("eventType", "OrderCreated"u8.ToArray()), new Header("version", "1"u8.ToArray())],
+        [new Header(HeadersNames.EventType, "OrderCreated"u8.ToArray()), new Header(HeadersNames.PackageVersion, "1"u8.ToArray())],
         "order-1"u8.ToArray(),
         """{"orderId":1,"amount":500}"""u8.ToArray());
 

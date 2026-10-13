@@ -27,8 +27,9 @@ static Headers H(params (string Key, byte[]? Value)[] items)
     return h;
 }
 static byte[] T(string s) => Encoding.UTF8.GetBytes(s);
-static Headers Ev(string type, string version) => H(("eventType", T(type)), ("version", T(version)));
-
+const string EventType = "Event-Type";
+const string PackageVersion = "Event-PackageVersion";
+static Headers Ev(string type, string version) => H((EventType, T(type)), (PackageVersion, T(version)));
 var messages = new (string Key, Headers Headers, string? Payload, string Comment)[]
 {
     ("101", Ev("OrderCreated", "1"),   """{"orderId":101,"amount":500}""",                    "наше, валидное"),
@@ -36,15 +37,15 @@ var messages = new (string Key, Headers Headers, string? Payload, string Comment
     ("103", Ev("OrderCreated", "2"),   """{"orderId":103,"amount":700,"currency":"RUB"}""",   "наше, валидное v2"),
     ("101", Ev("OrderCancelled", "1"), """{"orderId":101,"reason":"client"}""",              "наше, валидное"),
     ("101", Ev("PaymentCaptured", "1"), """{"paymentId":9001,"orderId":101}""",              "чужое"),
-    ("102", H(("eventType", T("CourierAssigned"))), """{"courierId":7,"orderId":102}""",     "чужое, без version"),
+    ("102", H((EventType, T("CourierAssigned"))), """{"courierId":7,"orderId":102}""",     "чужое, без version"),
     ("104", Ev("OrderCreated", "1"),   """{"orderId":104,"amount":""",                       "битое: JSON оборван"),
     ("105", Ev("OrderCreated", "3"),   """{"orderId":105,"amount":100}""",                    "битое: неизвестная версия"),
-    ("106", H(("version", T("1"))),    """{"orderId":106,"amount":100}""",                    "битое: нет eventType"),
+    ("106", H((PackageVersion, T("1"))),    """{"orderId":106,"amount":100}""",                    "битое: нет eventType"),
     ("107", Ev("", "1"),               """{"orderId":107,"amount":100}""",                    "битое: пустой eventType"),
-    ("108", H(("eventType", [0xFF, 0xFE]), ("version", T("1"))), """{"orderId":108,"amount":100}""", "битое: eventType не UTF-8"),
-    ("109", H(("eventType", T("OrderCreated")), ("version", T("1")), ("eventType", T("OrderCancelled"))),
+    ("108", H((EventType, [0xFF, 0xFE]), (PackageVersion, T("1"))), """{"orderId":108,"amount":100}""", "битое: eventType не UTF-8"),
+    ("109", H((EventType, T("OrderCreated")), (PackageVersion, T("1")), (EventType, T("OrderCancelled"))),
                                        """{"orderId":109,"amount":100}""",                    "битое: eventType дважды, разные"),
-    ("110", H(("eventType", T("OrderCreated")), ("version", T("1")), ("eventType", T("OrderCreated"))),
+    ("110", H((EventType, T("OrderCreated")), (PackageVersion, T("1")), (EventType, T("OrderCreated"))),
                                        """{"orderId":110,"amount":100}""",                    "битое: eventType дважды, одинаковые"),
     ("111", Ev("OrderCreated", "1"),   null,                                                  "tombstone (value = null)"),
     ("112", Ev("OrderCreated", "1"),   "",                                                    "битое: пустое тело"),

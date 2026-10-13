@@ -118,7 +118,7 @@ record ReportEntry(
         r.Headers.Select(h => new ReportHeader(h.Key, h.Value is null ? null : Text(h.Value), h.Value is null ? null : Convert.ToHexString(h.Value))).ToList(),
         r.Payload is null ? null : Text(r.Payload),
         Checksum(r),
-        r.Headers.Where(h => h.Key == "eventType" && h.Value is { Length: > 0 }).Select(h => Text(h.Value!)).FirstOrDefault(),
+        r.Headers.Where(h => h.Key == HeadersNames.EventType && h.Value is { Length: > 0 }).Select(h => Text(h.Value!)).FirstOrDefault(),
         d.Verdict.ToString(), d.Reason.ToString(), d.Details, d.ResultJson);
 
     // текст если это UTF-8

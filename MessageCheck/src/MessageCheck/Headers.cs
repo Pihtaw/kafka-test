@@ -2,6 +2,12 @@ using System.Text;
 
 namespace MessageCheck;
 
+public static class HeadersNames
+{
+    public const string EventType = "Event-Type";
+    public const string PackageVersion = "Event-PackageVersion";
+}
+
 public static class HeaderReader
 {
     // на битых байтах кидаем искулючение
