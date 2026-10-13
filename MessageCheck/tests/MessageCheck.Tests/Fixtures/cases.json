@@ -1,14 +1,14 @@
 [
   {
-    "name": "валидное OrderCreated v1",
+    "name": "валидное OrderCreated, пакет 1.0.0",
     "headers": [
       {
         "key": "Event-Type",
-        "value": "OrderCreated"
+        "value": "MessageCheck.SampleContracts.OrderCreated"
       },
       {
         "key": "Event-PackageVersion",
-        "value": "1"
+        "value": "1.0.0"
       }
     ],
     "payload": "{\"orderId\":1,\"amount\":500}",
@@ -16,15 +16,15 @@
     "expectedReason": "Ok"
   },
   {
-    "name": "валидное OrderCreated v2",
+    "name": "валидное OrderCreated, пакет 1.1.0 (с Currency)",
     "headers": [
       {
         "key": "Event-Type",
-        "value": "OrderCreated"
+        "value": "MessageCheck.SampleContracts.OrderCreated"
       },
       {
         "key": "Event-PackageVersion",
-        "value": "2"
+        "value": "1.1.0"
       }
     ],
     "payload": "{\"orderId\":2,\"amount\":700,\"currency\":\"RUB\"}",
@@ -32,15 +32,15 @@
     "expectedReason": "Ok"
   },
   {
-    "name": "валидное OrderCancelled v1",
+    "name": "валидное OrderCancelled",
     "headers": [
       {
         "key": "Event-Type",
-        "value": "OrderCancelled"
+        "value": "MessageCheck.SampleContracts.OrderCancelled"
       },
       {
         "key": "Event-PackageVersion",
-        "value": "1"
+        "value": "1.0.0"
       }
     ],
     "payload": "{\"orderId\":1,\"reason\":\"client\"}",
@@ -48,11 +48,11 @@
     "expectedReason": "Ok"
   },
   {
-    "name": "нет заголовка eventType",
+    "name": "нет заголовка Event-Type",
     "headers": [
       {
         "key": "Event-PackageVersion",
-        "value": "1"
+        "value": "1.0.0"
       }
     ],
     "payload": "{\"orderId\":3,\"amount\":100}",
@@ -60,19 +60,19 @@
     "expectedReason": "MissingEventType"
   },
   {
-    "name": "нет заголовка version",
+    "name": "нет Event-PackageVersion — версия только для отчёта, событие читается",
     "headers": [
       {
         "key": "Event-Type",
-        "value": "OrderCreated"
+        "value": "MessageCheck.SampleContracts.OrderCreated"
       }
     ],
     "payload": "{\"orderId\":4,\"amount\":100}",
-    "expectedVerdict": "Rejected",
-    "expectedReason": "MissingVersion"
+    "expectedVerdict": "Allowed",
+    "expectedReason": "Ok"
   },
   {
-    "name": "eventType пустая строка",
+    "name": "Event-Type пустая строка",
     "headers": [
       {
         "key": "Event-Type",
@@ -80,7 +80,7 @@
       },
       {
         "key": "Event-PackageVersion",
-        "value": "1"
+        "value": "1.0.0"
       }
     ],
     "payload": "{\"orderId\":11,\"amount\":100}",
@@ -88,7 +88,7 @@
     "expectedReason": "EmptyHeader"
   },
   {
-    "name": "eventType из пробелов",
+    "name": "Event-Type из пробелов",
     "headers": [
       {
         "key": "Event-Type",
@@ -96,7 +96,7 @@
       },
       {
         "key": "Event-PackageVersion",
-        "value": "1"
+        "value": "1.0.0"
       }
     ],
     "payload": "{\"orderId\":12,\"amount\":100}",
@@ -104,11 +104,11 @@
     "expectedReason": "EmptyHeader"
   },
   {
-    "name": "version без значения (null)",
+    "name": "Event-PackageVersion без значения (null)",
     "headers": [
       {
         "key": "Event-Type",
-        "value": "OrderCreated"
+        "value": "MessageCheck.SampleContracts.OrderCreated"
       },
       {
         "key": "Event-PackageVersion"
@@ -119,7 +119,7 @@
     "expectedReason": "EmptyHeader"
   },
   {
-    "name": "eventType не UTF-8 (байт 0xFF)",
+    "name": "Event-Type не UTF-8 (байт 0xFF)",
     "headers": [
       {
         "key": "Event-Type",
@@ -127,7 +127,7 @@
       },
       {
         "key": "Event-PackageVersion",
-        "value": "1"
+        "value": "1.0.0"
       }
     ],
     "payload": "{\"orderId\":14,\"amount\":100}",
@@ -135,19 +135,19 @@
     "expectedReason": "InvalidHeaderEncoding"
   },
   {
-    "name": "eventType дважды с разными значениями",
+    "name": "Event-Type дважды с разными значениями",
     "headers": [
       {
         "key": "Event-Type",
-        "value": "OrderCreated"
+        "value": "MessageCheck.SampleContracts.OrderCreated"
       },
       {
         "key": "Event-PackageVersion",
-        "value": "1"
+        "value": "1.0.0"
       },
       {
         "key": "Event-Type",
-        "value": "OrderCancelled"
+        "value": "MessageCheck.SampleContracts.OrderCancelled"
       }
     ],
     "payload": "{\"orderId\":15,\"amount\":100}",
@@ -155,19 +155,19 @@
     "expectedReason": "DuplicateHeader"
   },
   {
-    "name": "eventType дважды с одинаковым значением",
+    "name": "Event-Type дважды с одинаковым значением",
     "headers": [
       {
         "key": "Event-Type",
-        "value": "OrderCreated"
+        "value": "MessageCheck.SampleContracts.OrderCreated"
       },
       {
         "key": "Event-PackageVersion",
-        "value": "1"
+        "value": "1.0.0"
       },
       {
         "key": "Event-Type",
-        "value": "OrderCreated"
+        "value": "MessageCheck.SampleContracts.OrderCreated"
       }
     ],
     "payload": "{\"orderId\":16,\"amount\":100}",
@@ -179,11 +179,11 @@
     "headers": [
       {
         "key": "Event-Type",
-        "value": "PaymentCaptured"
+        "value": "Dodo.Payments.Contracts.PaymentCaptured"
       },
       {
         "key": "Event-PackageVersion",
-        "value": "1"
+        "value": "1.0.0"
       }
     ],
     "payload": "{\"paymentId\":5}",
@@ -191,11 +191,11 @@
     "expectedReason": "NotOurEvent"
   },
   {
-    "name": "чужое событие без version — всё равно пропуск",
+    "name": "чужое событие без Event-PackageVersion — всё равно пропуск",
     "headers": [
       {
         "key": "Event-Type",
-        "value": "CourierAssigned"
+        "value": "Dodo.Delivery.Contracts.CourierAssigned"
       }
     ],
     "payload": "{\"courierId\":7}",
@@ -203,31 +203,31 @@
     "expectedReason": "NotOurEvent"
   },
   {
-    "name": "наш тип, неизвестная версия",
+    "name": "незнакомая версия пакета — тип тот же, событие читается",
     "headers": [
       {
         "key": "Event-Type",
-        "value": "OrderCreated"
+        "value": "MessageCheck.SampleContracts.OrderCreated"
       },
       {
         "key": "Event-PackageVersion",
-        "value": "3"
+        "value": "2.0.0"
       }
     ],
     "payload": "{\"orderId\":6,\"amount\":100}",
-    "expectedVerdict": "Rejected",
-    "expectedReason": "UnknownVersion"
+    "expectedVerdict": "Allowed",
+    "expectedReason": "Ok"
   },
   {
     "name": "битый JSON",
     "headers": [
       {
         "key": "Event-Type",
-        "value": "OrderCreated"
+        "value": "MessageCheck.SampleContracts.OrderCreated"
       },
       {
         "key": "Event-PackageVersion",
-        "value": "1"
+        "value": "1.0.0"
       }
     ],
     "payload": "{\"orderId\":7,\"amount\":",
@@ -239,11 +239,11 @@
     "headers": [
       {
         "key": "Event-Type",
-        "value": "OrderCreated"
+        "value": "MessageCheck.SampleContracts.OrderCreated"
       },
       {
         "key": "Event-PackageVersion",
-        "value": "1"
+        "value": "1.0.0"
       }
     ],
     "payload": "{\"orderId\":8,\"amount\":\"много\"}",
@@ -251,31 +251,31 @@
     "expectedReason": "InvalidPayload"
   },
   {
-    "name": "v2 без обязательного currency",
+    "name": "без необязательного Currency (старое событие) — читается",
     "headers": [
       {
         "key": "Event-Type",
-        "value": "OrderCreated"
+        "value": "MessageCheck.SampleContracts.OrderCreated"
       },
       {
         "key": "Event-PackageVersion",
-        "value": "2"
+        "value": "1.1.0"
       }
     ],
     "payload": "{\"orderId\":9,\"amount\":100}",
-    "expectedVerdict": "ConversionError",
-    "expectedReason": "InvalidPayload"
+    "expectedVerdict": "Allowed",
+    "expectedReason": "Ok"
   },
   {
     "name": "лишнее поле, которого нет в DTO",
     "headers": [
       {
         "key": "Event-Type",
-        "value": "OrderCreated"
+        "value": "MessageCheck.SampleContracts.OrderCreated"
       },
       {
         "key": "Event-PackageVersion",
-        "value": "1"
+        "value": "1.0.0"
       }
     ],
     "payload": "{\"orderId\":10,\"amount\":100,\"comment\":\"hi\"}",
@@ -287,11 +287,11 @@
     "headers": [
       {
         "key": "Event-Type",
-        "value": "OrderCancelled"
+        "value": "MessageCheck.SampleContracts.OrderCancelled"
       },
       {
         "key": "Event-PackageVersion",
-        "value": "1"
+        "value": "1.0.0"
       }
     ],
     "payload": "{\"orderId\":5}",
@@ -303,11 +303,11 @@
     "headers": [
       {
         "key": "Event-Type",
-        "value": "OrderCreated"
+        "value": "MessageCheck.SampleContracts.OrderCreated"
       },
       {
         "key": "Event-PackageVersion",
-        "value": "1"
+        "value": "1.0.0"
       }
     ],
     "payload": "",
@@ -315,19 +315,19 @@
     "expectedReason": "InvalidPayload"
   },
   {
-    "name": "version дважды с одинаковым значением",
+    "name": "Event-PackageVersion дважды с одинаковым значением",
     "headers": [
       {
         "key": "Event-Type",
-        "value": "OrderCreated"
+        "value": "MessageCheck.SampleContracts.OrderCreated"
       },
       {
         "key": "Event-PackageVersion",
-        "value": "1"
+        "value": "1.0.0"
       },
       {
         "key": "Event-PackageVersion",
-        "value": "1"
+        "value": "1.0.0"
       }
     ],
     "payload": "{\"orderId\":17,\"amount\":100}",
@@ -335,15 +335,15 @@
     "expectedReason": "DuplicateHeader"
   },
   {
-    "name": "eventType в другом регистре",
+    "name": "Event-Type в другом регистре (полное имя)",
     "headers": [
       {
         "key": "Event-Type",
-        "value": "orderCreated"
+        "value": "messagecheck.samplecontracts.ordercreated"
       },
       {
         "key": "Event-PackageVersion",
-        "value": "1"
+        "value": "1.0.0"
       }
     ],
     "payload": "{\"orderId\":18,\"amount\":100}",
@@ -355,11 +355,11 @@
     "headers": [
       {
         "key": "Event-Type",
-        "value": "OrderCreated"
+        "value": "MessageCheck.SampleContracts.OrderCreated"
       },
       {
         "key": "Event-PackageVersion",
-        "value": "1"
+        "value": "1.0.0"
       }
     ],
     "payload": null,
@@ -372,5 +372,21 @@
     "payload": null,
     "expectedVerdict": "Skipped",
     "expectedReason": "Tombstone"
+  },
+  {
+    "name": "короткое имя типа без namespace — чужое событие",
+    "headers": [
+      {
+        "key": "Event-Type",
+        "value": "OrderCreated"
+      },
+      {
+        "key": "Event-PackageVersion",
+        "value": "1.0.0"
+      }
+    ],
+    "payload": "{\"orderId\":19,\"amount\":100}",
+    "expectedVerdict": "Skipped",
+    "expectedReason": "NotOurEvent"
   }
 ]

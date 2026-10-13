@@ -2,7 +2,7 @@ using System.Text;
 
 namespace MessageCheck;
 
-public static class HeadersNames
+public static class HeaderNames
 {
     public const string EventType = "Event-Type";
     public const string PackageVersion = "Event-PackageVersion";
@@ -61,6 +61,24 @@ public static class HeaderReader
         }
 
         value = values[0];
+        return true;
+    }
+
+
+    // необязательный заголовок
+    // в случае отсутствия - не ошибка
+    // в случае присутствия те же требования и проверки
+    public static bool TryReadOptional(IReadOnlyList<Header> headers, string name,
+                                       out string? value, out Decision? fail)
+    {
+        value = null;
+        fail = null;
+        if (!headers.Any(h => h.Key == name))
+            return true;
+
+        if (!TryRead(headers, name, Reason.EmptyHeader, out var text, out fail))
+            return false;
+        value = text;
         return true;
     }
 }

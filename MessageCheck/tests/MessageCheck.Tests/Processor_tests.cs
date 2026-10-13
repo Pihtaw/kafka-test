@@ -30,8 +30,7 @@ public class ProcessorTests
 {
     // валидное сообщение
     private static readonly KafkaRecord ValidRecord = new(
-        [new Header(HeadersNames.EventType, "OrderCreated"u8.ToArray()), new Header(HeadersNames.PackageVersion, "1"u8.ToArray())],
-        "order-1"u8.ToArray(),
+        [new Header(HeaderNames.EventType, "MessageCheck.SampleContracts.OrderCreated"u8.ToArray()), new Header(HeaderNames.PackageVersion, "1.0.0"u8.ToArray())],        "order-1"u8.ToArray(),
         """{"orderId":1,"amount":500}"""u8.ToArray());
 
     private static Processor MakeProcessor(IConverter converter)
@@ -98,6 +97,6 @@ public class ProcessorTests
         var decision = await MakeProcessor(new JsonModule()).ProcessAsync(ValidRecord);
 
         Assert.True(decision.CanSend);
-        Assert.Equal("""{"orderId":1,"amount":500}""", decision.ResultJson);
+        Assert.Equal("""{"orderId":1,"amount":500,"currency":null}""", decision.ResultJson);
     }
 }

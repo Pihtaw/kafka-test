@@ -1,23 +1,20 @@
-namespace MessageCheck;
+namespace MessageCheck.SampleContracts;
 
-// DTO — классы, в которые превращается JSON
-// required — поле обязано быть в JSON - еще одна проверка на ошибку
+// тип НЕ создаётся заново на каждую версию
+// а меняется от версии пакета к версии пакета
+// в заголовке Event-Type приходит полное имя класса
+// required — поле обязано прийти в JSON, иначе ошибка
 
-public record OrderCreatedV1
+public record OrderCreated
 {
     public required long OrderId { get; init; }
     public required decimal Amount { get; init; }
+
+    // необязательное: старые события без него должны читаться
+    public string? Currency { get; init; }
 }
 
-// версия 2 того же события: добавилось обязательное поле Currency.
-public record OrderCreatedV2
-{
-    public required long OrderId { get; init; }
-    public required decimal Amount { get; init; }
-    public required string Currency { get; init; }
-}
-
-public record OrderCancelledV1
+public record OrderCancelled
 {
     public required long OrderId { get; init; }
     public required string Reason { get; init; }
