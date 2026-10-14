@@ -5,9 +5,8 @@ namespace MessageCheck;
 
 public interface IConverter
 {
-    // Превратить payload в объект типа dtoType.
-    // ct — «кнопка отмены»: процессор нажмёт её, если модуль думает слишком долго.
-    Task<object?> ConvertAsync(string payload, Type dtoType, CancellationToken ct);
+    // байты в dtoType, ct при таймауте
+    Task<object?> ConvertAsync(byte[] payload, Type dtoType, CancellationToken ct);
 }
 
 public class JsonModule : IConverter
@@ -17,9 +16,9 @@ public class JsonModule : IConverter
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow // лишнее поле в JSON - ошибка
     };
 
-    public Task<object?> ConvertAsync(string payload, Type dtoType, CancellationToken ct)
+    public Task<object?> ConvertAsync(byte[] payload, Type dtoType, CancellationToken ct)
     {
-        // обработка если json битый
+        // JsonException на битом JSON
         var result = JsonSerializer.Deserialize(payload, dtoType, Options);
         return Task.FromResult(result);
     }

@@ -1,29 +1,36 @@
 namespace MessageCheck;
 
-// Одно сообщение «как из Кафки», но без Кафки: просто данные в памяти.
-// В настоящей Кафке заголовки и payload — байты; здесь для простоты строки.
+public record Header(string Key, byte[]? Value);
+
+// в байтах
 public record KafkaRecord(
-    Dictionary<string, string> Headers,
-    string? Key,
-    string Payload);
+    IReadOnlyList<Header> Headers,
+    byte[]? Key,
+    byte[]? Payload);
 
 public enum Verdict
 {
     Allowed,
     Rejected,
-    ConversionError  // ошибка на этапе модуля преобразования, тл
+    ConversionError,
+    Skipped // чужое событие не битое
 }
 
 public enum Reason
 {
     Ok,
-    MissingEventType,      // нет заголовка eventType
-    MissingVersion,        // нет заголовка version
-    UnknownEvent,          // пары (eventType, version) нет в каталоге
-    InvalidPayload,        // JSON битый или не подходит под DTO
-    ModuleTimeout,         // тл модуля
-    ModuleCrashed,         // модуль упал с неожиданной ошибкой
-    ModuleInvalidResponse  // модуль ответил, но нулом или не того типа
+    MissingEventType,
+    MissingVersion,
+    EmptyHeader,
+    InvalidHeaderEncoding, // не UTF-8
+    DuplicateHeader,       // заголовок повторяется с разными значениями
+    NotOurEvent,           // чужое событие
+    UnknownVersion,
+    InvalidPayload,
+    ModuleTimeout,
+    ModuleCrashed,
+    ModuleInvalidResponse,
+    Tombstone
 }
 
 public record Decision(

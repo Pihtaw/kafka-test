@@ -7,7 +7,7 @@ namespace MessageCheck.Tests;
 // Тормозит: думает 10 секунд - тл
 public class SlowModule : IConverter
 {
-    public async Task<object?> ConvertAsync(string payload, Type dtoType, CancellationToken ct)
+    public async Task<object?> ConvertAsync(byte[] payload, Type dtoType, CancellationToken ct)
     {
         await Task.Delay(TimeSpan.FromSeconds(10), ct);
         return null;
@@ -17,13 +17,13 @@ public class SlowModule : IConverter
 // Падает с неожиданной ошибкой
 public class CrashingModule : IConverter
 {
-    public Task<object?> ConvertAsync(string payload, Type dtoType, CancellationToken ct)
+    public Task<object?> ConvertAsync(byte[] payload, Type dtoType, CancellationToken ct)
         => throw new InvalidOperationException("модуль аварийно завершился");
 }
 
 // null или объект не того типа
 public class WrongAnswerModule(object? answer) : IConverter
 {
-    public Task<object?> ConvertAsync(string payload, Type dtoType, CancellationToken ct)
+    public Task<object?> ConvertAsync(byte[] payload, Type dtoType, CancellationToken ct)
         => Task.FromResult(answer);
 }
