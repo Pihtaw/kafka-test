@@ -53,7 +53,7 @@ services:
     image: docker.redpanda.com/redpandadata/connect:latest
     profiles: ["tools"]
     volumes:
-      - ./tools/connect.yaml:/connect.yaml
+      - ./learning/tools/connect.yaml:/connect.yaml
     command: ["run"]
     depends_on:
       - kafka
