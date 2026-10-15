@@ -11,18 +11,17 @@ public class Processor(EventCatalog catalog, IConverter converter, TimeSpan time
             return new Decision(Verdict.Skipped, Reason.Tombstone, "value = null: tombstone, не событие");
 
         // UTF-8 без повторов
-        if (!HeaderReader.TryRead(record.Headers, "eventType", Reason.MissingEventType, out var eventType, out var fail))
+        if (!HeaderReader.TryRead(record.Headers, HeaderNames.EventType, Reason.MissingEventType, out var eventType, out var fail))
             return fail!;
 
         // чужое событие
-        if (!catalog.Knows(eventType))
+        if (!catalog.TryGet(eventType, out var dtoType))
             return new Decision(Verdict.Skipped, Reason.NotOurEvent, $"{eventType} — чужой тип");
 
-        if (!HeaderReader.TryRead(record.Headers, "version", Reason.MissingVersion, out var version, out fail))
+        // версия пакета — только для информации, тип по ней не выбираем
+        if (!HeaderReader.TryReadOptional(record.Headers, HeaderNames.PackageVersion, out var version, out fail))
             return fail!;
-
-        if (!catalog.TryGet(eventType, version, out var dtoType))
-            return new Decision(Verdict.Rejected, Reason.UnknownVersion, $"{eventType} v{version} нет в каталоге");
+        var versionText = version ?? "без версии";
 
         object? result;
         try
@@ -51,6 +50,15 @@ public class Processor(EventCatalog catalog, IConverter converter, TimeSpan time
             return new Decision(Verdict.ConversionError, Reason.ModuleInvalidResponse,
                 $"ожидали {dtoType.Name}, модуль вернул {result.GetType().Name}");
 
-        return new Decision(Verdict.Allowed, Reason.Ok, $"{eventType} v{version} → {dtoType.Name}", JsonModule.ToJson(result));
+        var resultJson = JsonModule.ToJson(result);
+        var details = $"{eventType} ({versionText}) → {dtoType.Name}";
+
+        // лишние поля не ошибка
+        // их пропускают настоящие потребители, но показываем их
+        var extra = JsonModule.ExtraFields(record.Payload, resultJson);
+        if (extra.Count > 0)
+            details += $"; лишние поля: {string.Join(", ", extra)}";
+
+        return new Decision(Verdict.Allowed, Reason.Ok, details, resultJson);
     }
 }
