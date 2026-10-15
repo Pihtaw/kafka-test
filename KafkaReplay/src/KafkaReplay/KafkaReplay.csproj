@@ -5,6 +5,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AssemblyName>replay</AssemblyName>
+    <RootNamespace>KafkaReplay</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../MessageCheck/src/MessageCheck/MessageCheck.csproj" />
+    <ProjectReference Include="../../../MessageCheck/src/MessageCheck/MessageCheck.csproj" />
   </ItemGroup>
 
 </Project>

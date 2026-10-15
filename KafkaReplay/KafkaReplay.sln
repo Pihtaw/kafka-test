@@ -1,0 +1,48 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C91E3D6E-9E9A-4AF1-B73B-23BACC1B2786}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KafkaReplay", "src\KafkaReplay\KafkaReplay.csproj", "{184EDEB5-370E-4DF7-8A42-EF26A8797403}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{F585E165-5645-4209-960C-9DEFE67E0C61}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KafkaReplay.Tests", "tests\KafkaReplay.Tests\KafkaReplay.Tests.csproj", "{0EDD2CE2-7D11-4F8F-A39B-EFDA72138B19}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageCheck", "..\MessageCheck\src\MessageCheck\MessageCheck.csproj", "{66E55933-7645-4A8E-B1E7-AA76AD40C804}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageCheck.Tests", "..\MessageCheck\tests\MessageCheck.Tests\MessageCheck.Tests.csproj", "{5D7359F9-6C37-41CB-8C9B-29F4572F60C4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{184EDEB5-370E-4DF7-8A42-EF26A8797403}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{184EDEB5-370E-4DF7-8A42-EF26A8797403}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{184EDEB5-370E-4DF7-8A42-EF26A8797403}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{184EDEB5-370E-4DF7-8A42-EF26A8797403}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0EDD2CE2-7D11-4F8F-A39B-EFDA72138B19}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0EDD2CE2-7D11-4F8F-A39B-EFDA72138B19}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0EDD2CE2-7D11-4F8F-A39B-EFDA72138B19}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0EDD2CE2-7D11-4F8F-A39B-EFDA72138B19}.Release|Any CPU.Build.0 = Release|Any CPU
+		{66E55933-7645-4A8E-B1E7-AA76AD40C804}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{66E55933-7645-4A8E-B1E7-AA76AD40C804}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{66E55933-7645-4A8E-B1E7-AA76AD40C804}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{66E55933-7645-4A8E-B1E7-AA76AD40C804}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D7359F9-6C37-41CB-8C9B-29F4572F60C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D7359F9-6C37-41CB-8C9B-29F4572F60C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D7359F9-6C37-41CB-8C9B-29F4572F60C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D7359F9-6C37-41CB-8C9B-29F4572F60C4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{184EDEB5-370E-4DF7-8A42-EF26A8797403} = {C91E3D6E-9E9A-4AF1-B73B-23BACC1B2786}
+		{0EDD2CE2-7D11-4F8F-A39B-EFDA72138B19} = {F585E165-5645-4209-960C-9DEFE67E0C61}
+	EndGlobalSection
+EndGlobal
