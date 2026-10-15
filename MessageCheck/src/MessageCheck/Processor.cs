@@ -59,5 +59,6 @@ public class Processor(EventCatalog catalog, IConverter converter, TimeSpan time
         if (extra.Count > 0)
             details += $"; лишние поля: {string.Join(", ", extra)}";
 
-        return new Decision(Verdict.Allowed, Reason.Ok, details, resultJson); }
+        return new Decision(Verdict.Allowed, Reason.Ok, details, resultJson);
     }
+}
