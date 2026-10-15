@@ -5,7 +5,6 @@ namespace KafkaReplay;
 // как в docs/connection-strings.md в kafka-tools
 //   BootstrapServers=kafka.stand-name:9092;
 //   BootstrapServers=ns.servicebus.windows.net:9093;Type=EventHubSas;SharedAccessKeyName=..;SharedAccessKey=..;
-//   BootstrapServers=c-id.mdb.yandexcloud.net:9091;Type=Yandex;Username=..;Password=..;
 public sealed class ConnectionSettings
 {
     public string Type { get; }
@@ -61,12 +60,11 @@ public sealed class ConnectionSettings
         {
             "plain" => [],
             "eventhubsas" => ["SharedAccessKeyName", "SharedAccessKey"],
-            "yandex" => ["Username", "Password"],
             _ => null
         };
         if (required is null)
         {
-            error = $"неизвестный Type={t}, есть: EventHubSas, Yandex (или без Type для dev-стенда)";
+            error = $"неизвестный Type={t}, есть: EventHubSas (или без Type для dev-стенда)";
             return false;
         }
 
@@ -103,15 +101,6 @@ public sealed class ConnectionSettings
                 c.SaslMechanism = SaslMechanism.Plain;
                 c.SaslUsername = "$ConnectionString";
                 c.SaslPassword = $"Endpoint=sb://{Host}/;SharedAccessKeyName={_fields["SharedAccessKeyName"]};SharedAccessKey={_fields["SharedAccessKey"]}";
-                break;
-
-            case "yandex":
-                // Yandex Managed Kafka: SASL_SSL + SCRAM-SHA-512.
-                c.SecurityProtocol = SecurityProtocol.SaslSsl;
-                c.SaslMechanism = SaslMechanism.ScramSha512;
-                c.SaslUsername = _fields["Username"];
-                c.SaslPassword = _fields["Password"];
-                c.EnableSslCertificateVerification = false;
                 break;
         }
         return c;

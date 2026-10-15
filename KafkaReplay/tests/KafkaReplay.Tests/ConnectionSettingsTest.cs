@@ -3,7 +3,7 @@ using KafkaReplay;
 
 namespace KafkaReplay.Tests;
 
-// Строки подключения в формате kafka-tools
+// строки подключения в формате kafka-tools
 public class ConnectionSettingsTests
 {
     private static ConnectionSettings Parse(string connectionString)
@@ -40,20 +40,13 @@ public class ConnectionSettingsTests
         Assert.Equal(SecurityProtocol.SaslSsl, c.SecurityProtocol);
         Assert.Equal(SaslMechanism.Plain, c.SaslMechanism);
         Assert.Equal("$ConnectionString", c.SaslUsername);
-        // '=' в конце ключа не потерялся: делим по первому '='
         Assert.Equal("Endpoint=sb://ns.servicebus.windows.net/;SharedAccessKeyName=listen;SharedAccessKey=abc+def=", c.SaslPassword);
     }
 
     [Fact]
-    public void Yandex_uses_scram_without_certificate_check()
+    public void Yandex_is_not_supported()
     {
-        var c = Parse("BootstrapServers=c-id.mdb.yandexcloud.net:9091;Type=Yandex;Username=user;Password=pass").ToClientConfig();
-
-        Assert.Equal(SecurityProtocol.SaslSsl, c.SecurityProtocol);
-        Assert.Equal(SaslMechanism.ScramSha512, c.SaslMechanism);
-        Assert.Equal("user", c.SaslUsername);
-        Assert.Equal("pass", c.SaslPassword);
-        Assert.False(c.EnableSslCertificateVerification!.Value);
+        Assert.Contains("Yandex", ParseError("BootstrapServers=c-id.mdb.yandexcloud.net:9091;Type=Yandex;Username=u;Password=p"));
     }
 
     [Fact]
@@ -62,8 +55,7 @@ public class ConnectionSettingsTests
         foreach (var cs in new[]
         {
             "BootstrapServers=localhost:9092",
-            "BootstrapServers=ns.servicebus.windows.net:9093;Type=EventHubSas;SharedAccessKeyName=n;SharedAccessKey=k",
-            "BootstrapServers=c.mdb.yandexcloud.net:9091;Type=Yandex;Username=u;Password=p"
+            "BootstrapServers=ns.servicebus.windows.net:9093;Type=EventHubSas;SharedAccessKeyName=n;SharedAccessKey=k"
         })
         {
             var c = Parse(cs).ToClientConfig();
@@ -76,9 +68,9 @@ public class ConnectionSettingsTests
     [Fact]
     public void Names_and_type_are_case_insensitive()
     {
-        var s = Parse("bootstrapservers=h:9091;TYPE=yandex;username=u;PASSWORD=p");
-        Assert.Equal("yandex", s.Type);
-        Assert.Equal("h:9091", s.BootstrapServers);
+        var s = Parse("bootstrapservers=h:9093;TYPE=eventhubsas;sharedaccesskeyname=n;SHAREDACCESSKEY=k");
+        Assert.Equal("eventhubsas", s.Type);
+        Assert.Equal("h:9093", s.BootstrapServers);
     }
 
     [Fact]
@@ -98,14 +90,14 @@ public class ConnectionSettingsTests
     [Fact]
     public void Missing_field_is_named()
     {
-        var error = ParseError("BootstrapServers=h:9091;Type=Yandex;Username=u");
-        Assert.Contains("Password", error);
+        var error = ParseError("BootstrapServers=h:9093;Type=EventHubSas;SharedAccessKeyName=n");
+        Assert.Contains("SharedAccessKey", error);
     }
 
     [Fact]
     public void Secret_is_never_in_error()
     {
-        var error = ParseError("BootstrapServers=h:9091;Type=Yandex;Password=hunter2;Password=hunter3");
+        var error = ParseError("BootstrapServers=h:9093;Type=EventHubSas;SharedAccessKey=hunter2;SharedAccessKey=hunter3");
         Assert.DoesNotContain("hunter", error);
     }
 

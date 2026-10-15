@@ -1,22 +1,40 @@
+using System.Runtime.CompilerServices;
 using System.Text;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
+using MessageCheck;
 
-// Идея мультитопика, (1) наши валидные, (2) чужие, (3) юитые
+// Наполняет топик тестовыми событиями.
+//   dotnet run                                   — учебные события в orders-multi: наши валидные, чужие и битые
+//   dotnet run -- <топик>                        — то же в другой топик
+//   dotnet run -- --contracts <Dodo.EventRegistry.dll> [<топик>]
+//                                                — по одному событию каждого типа из реестра контрактов (настоящие классы),
+//                                                  по умолчанию в registry-events
 
-string topic = args.Length > 0 ? args[0] : "orders-multi";
+string? contractsPath = null;
+var positional = new List<string>();
+for (int i = 0; i < args.Length; i++)
+{
+    if (args[i] == "--contracts" && i + 1 < args.Length) contractsPath = args[++i];
+    else positional.Add(args[i]);
+}
+string topic = positional.Count > 0 ? positional[0] : contractsPath is null ? "orders-multi" : "registry-events";
 const string bootstrap = "localhost:9092";
+const string copyTopic = "orders-copy"; // цель для демо отправки (KafkaReplay/samples/routes.json)
 
 using (var admin = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = bootstrap }).Build())
 {
-    try
+    foreach (var name in new[] { topic, copyTopic })
     {
-        await admin.CreateTopicsAsync([new TopicSpecification { Name = topic, NumPartitions = 3, ReplicationFactor = 1 }]);
-        Console.WriteLine($"Создан топик {topic} (3 партиции)");
-    }
-    catch (CreateTopicsException e) when (e.Results.All(r => r.Error.Code == ErrorCode.TopicAlreadyExists))
-    {
-        Console.WriteLine($"Топик {topic} уже есть");
+        try
+        {
+            await admin.CreateTopicsAsync([new TopicSpecification { Name = name, NumPartitions = 3, ReplicationFactor = 1 }]);
+            Console.WriteLine($"Создан топик {name} (3 партиции)");
+        }
+        catch (CreateTopicsException e) when (e.Results.All(r => r.Error.Code == ErrorCode.TopicAlreadyExists))
+        {
+            Console.WriteLine($"Топик {name} уже есть");
+        }
     }
 }
 
@@ -34,7 +52,7 @@ static Headers Ev(string type, string version) => H((EventType, T(type)), (Packa
 const string OrderCreated = "MessageCheck.SampleContracts.OrderCreated";
 const string OrderCancelled = "MessageCheck.SampleContracts.OrderCancelled";
 
-var messages = new (string Key, Headers Headers, string? Payload, string Comment)[]
+(string Key, Headers Headers, string? Payload, string Comment)[] messages = new (string Key, Headers Headers, string? Payload, string Comment)[]
 {
     ("101", Ev(OrderCreated, "1.0.0"),   """{"OrderId":101,"Amount":500}""",                    "наше, пакет 1.0.0"),
     ("102", Ev(OrderCreated, "1.0.0"),   """{"OrderId":102,"Amount":300,"Comment":"позвонить"}""", "наше, пакет 1.0.0, лишнее поле Comment пропускается"),
@@ -55,6 +73,12 @@ var messages = new (string Key, Headers Headers, string? Payload, string Comment
     ("111", Ev(OrderCreated, "1.0.0"),   "",                                                    "битое: пустое тело (тот же ключ, что у tombstone)"),
 };
 
+if (contractsPath is not null)
+{
+    if (!ContractsLoader.TryLoad(contractsPath, out var contracts, out var error)) { Console.WriteLine($"ОТКАЗ: {error}"); return 3; }
+    messages = FromContracts(contracts!);
+}
+
 using var producer = new ProducerBuilder<string, string>(new ProducerConfig { BootstrapServers = bootstrap, Acks = Acks.All }).Build();
 
 var before = DateTimeOffset.Now;
@@ -67,4 +91,42 @@ var after = DateTimeOffset.Now.AddSeconds(1);
 Console.WriteLine($"\nОтправлено {messages.Length} сообщений. Проверить их утилитой:");
 const string timeFormat = "yyyy-MM-dd HH:mm:sszzz";
 var inv = System.Globalization.CultureInfo.InvariantCulture;
-Console.WriteLine($"  cd ../KafkaReplay/src/KafkaReplay && dotnet run -- --bootstrap {bootstrap} --topic {topic} --from \"{before.ToString(timeFormat, inv)}\" --to \"{after.ToString(timeFormat, inv)}\"");
+string window = $"--from \"{before.ToString(timeFormat, inv)}\" --to \"{after.ToString(timeFormat, inv)}\"";
+if (contractsPath is null)
+{
+    Console.WriteLine($"  cd ../KafkaReplay/src/KafkaReplay && dotnet run -- --bootstrap {bootstrap} --topic {topic} {window}");
+    Console.WriteLine("Проверить и построить план отправки в orders-copy:");
+    Console.WriteLine($"  cd ../KafkaReplay/src/KafkaReplay && dotnet run -- --bootstrap {bootstrap} --topic {topic} {window} --routes ../../samples/routes.json --target-bootstrap {bootstrap}");
+}
+else
+    Console.WriteLine($"  cd ../KafkaReplay/src/KafkaReplay && dotnet run -- --bootstrap {bootstrap} --topic {topic} {window} --contracts {Path.GetFullPath(contractsPath)}");
+return 0;
+
+// По одному событию каждого типа из реестра: пустой объект класса (все поля по умолчанию), сериализованный
+// так же, как его прочитает утилита. проверить, что события настоящих типов читаются и сравниваются
+static (string Key, Headers Headers, string? Payload, string Comment)[] FromContracts(LoadedContracts contracts)
+{
+    var result = new List<(string, Headers, string?, string)>();
+    int n = 0;
+    foreach (var name in contracts.EventTypesByTopic.Values.SelectMany(x => x).Distinct().Order(StringComparer.Ordinal))
+    {
+        if (!contracts.Catalog.TryGet(name, out var type)) continue;
+        string version = contracts.VersionOf(name) ?? "?";
+        try
+        {
+            object instance = RuntimeHelpers.GetUninitializedObject(type);
+            string json = JsonModule.ToJson(instance);
+            var headers = new Headers
+            {
+                { "Event-Type", Encoding.UTF8.GetBytes(name) },
+                { "Event-PackageVersion", Encoding.UTF8.GetBytes(version) }
+            };
+            result.Add(((++n).ToString(), headers, json, $"{name} {version}"));
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"  пропущен {name}: не удалось создать пример ({e.GetType().Name}: {e.Message})");
+        }
+    }
+    return result.ToArray();
+}

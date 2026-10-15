@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageCheck", "..\MessageC
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessageCheck.Tests", "..\MessageCheck\tests\MessageCheck.Tests\MessageCheck.Tests.csproj", "{5D7359F9-6C37-41CB-8C9B-29F4572F60C4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleRegistry", "tests\SampleRegistry\SampleRegistry.csproj", "{F8AF453F-28D5-456E-80E3-3E75770D6FB8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -40,9 +42,14 @@ Global
 		{5D7359F9-6C37-41CB-8C9B-29F4572F60C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5D7359F9-6C37-41CB-8C9B-29F4572F60C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5D7359F9-6C37-41CB-8C9B-29F4572F60C4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F8AF453F-28D5-456E-80E3-3E75770D6FB8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F8AF453F-28D5-456E-80E3-3E75770D6FB8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F8AF453F-28D5-456E-80E3-3E75770D6FB8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F8AF453F-28D5-456E-80E3-3E75770D6FB8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{184EDEB5-370E-4DF7-8A42-EF26A8797403} = {C91E3D6E-9E9A-4AF1-B73B-23BACC1B2786}
 		{0EDD2CE2-7D11-4F8F-A39B-EFDA72138B19} = {F585E165-5645-4209-960C-9DEFE67E0C61}
+		{F8AF453F-28D5-456E-80E3-3E75770D6FB8} = {F585E165-5645-4209-960C-9DEFE67E0C61}
 	EndGlobalSection
 EndGlobal

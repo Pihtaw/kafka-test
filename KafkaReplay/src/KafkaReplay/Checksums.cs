@@ -15,6 +15,34 @@ public static class Checksums
     public static string Record(KafkaRecord r)
     {
         using var ms = new MemoryStream();
+        PutRecord(ms, r);
+        return Hex(SHA256.HashData(ms.ToArray()));
+    }
+
+    // строка плана отправки запись + куда и с каким временем она уйдёт
+    public static string PlanItem(KafkaRecord r, string targetTopic, int targetPartition, long timestampMs)
+    {
+        using var ms = new MemoryStream();
+        PutRecord(ms, r);
+        Put(ms, Encoding.UTF8.GetBytes(targetTopic));
+        PutLength(ms, targetPartition);
+        Span<byte> ts = stackalloc byte[8];
+        BinaryPrimitives.WriteInt64LittleEndian(ts, timestampMs);
+        ms.Write(ts);
+        return Hex(SHA256.HashData(ms.ToArray()));
+    }
+
+    // весь план
+    public static string Plan(IEnumerable<string> headerFields, IEnumerable<string> itemSums)
+    {
+        using var ms = new MemoryStream();
+        foreach (var f in headerFields) Put(ms, Encoding.UTF8.GetBytes(f));
+        foreach (var s in itemSums) Put(ms, Encoding.UTF8.GetBytes(s));
+        return Hex(SHA256.HashData(ms.ToArray()));
+    }
+
+    private static void PutRecord(Stream ms, KafkaRecord r)
+    {
         Put(ms, r.Key);
         PutLength(ms, r.Headers.Count);
         foreach (var h in r.Headers)
@@ -23,7 +51,6 @@ public static class Checksums
             Put(ms, h.Value);
         }
         Put(ms, r.Payload);
-        return Hex(SHA256.HashData(ms.ToArray()));
     }
 
     // длина перед каждым куском, чтобы исключить ["ab","c"] и ["a","bc"] -> в одну сумму
