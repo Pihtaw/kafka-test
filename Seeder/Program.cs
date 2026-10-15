@@ -64,8 +64,7 @@ foreach (var m in messages)
     Console.WriteLine($"p{r.Partition.Value} o{r.Offset.Value} key={m.Key,-4} {m.Comment}");
 }
 var after = DateTimeOffset.Now.AddSeconds(1);
-
-Console.WriteLine($"\nОтправлено {messages.Length} сообщений. Прогнать dry-run по ним:");
+Console.WriteLine($"\nОтправлено {messages.Length} сообщений. Проверить их утилитой:");
 const string timeFormat = "yyyy-MM-dd HH:mm:sszzz";
 var inv = System.Globalization.CultureInfo.InvariantCulture;
-Console.WriteLine($"  cd ../DryRun && dotnet run -- {topic} \"{before.ToString(timeFormat, inv)}\" \"{after.ToString(timeFormat, inv)}\"");
+Console.WriteLine($"  cd ../KafkaReplay/src/KafkaReplay && dotnet run -- --bootstrap {bootstrap} --topic {topic} --from \"{before.ToString(timeFormat, inv)}\" --to \"{after.ToString(timeFormat, inv)}\"");
