@@ -1,0 +1,24 @@
+<Solution>
+  <Folder Name="/KafkaReplay/" />
+  <Folder Name="/KafkaReplay/src/">
+    <Project Path="KafkaReplay/src/KafkaReplay/KafkaReplay.csproj" />
+  </Folder>
+  <Folder Name="/KafkaReplay/tests/">
+    <Project Path="KafkaReplay/tests/KafkaReplay.Tests/KafkaReplay.Tests.csproj" />
+    <Project Path="KafkaReplay/tests/SampleRegistry/SampleRegistry.csproj" />
+  </Folder>
+  <Folder Name="/learning/">
+    <Project Path="learning/Consumer/Consumer.csproj" />
+    <Project Path="learning/CrashTest/CrashTest.csproj" />
+    <Project Path="learning/Producer/Producer.csproj" />
+    <Project Path="learning/RangeReader/RangeReader.csproj" />
+  </Folder>
+  <Folder Name="/MessageCheck/" />
+  <Folder Name="/MessageCheck/src/">
+    <Project Path="MessageCheck/src/MessageCheck/MessageCheck.csproj" />
+  </Folder>
+  <Folder Name="/MessageCheck/tests/">
+    <Project Path="MessageCheck/tests/MessageCheck.Tests/MessageCheck.Tests.csproj" />
+  </Folder>
+  <Project Path="Seeder/Seeder.csproj" />
+</Solution>
