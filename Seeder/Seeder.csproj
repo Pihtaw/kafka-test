@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Confluent.Kafka" Version="2.15.1" />
+    <PackageReference Include="Dodo.DataCatalog.Contracts" Version="2.99.0"/>
   </ItemGroup>
 
   <ItemGroup>
