@@ -1,0 +1,25 @@
+<Project>
+
+	<PropertyGroup>
+		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+	</PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
+    <NoWarn>NU1507,NU1903,S1135</NoWarn>
+    <!-- errors -->
+  </PropertyGroup>
+
+  <!-- <ItemGroup>
+    <PackageReference Include="JetBrains.Annotations" PrivateAssets="All" Version="2025.2.2"/>
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.17.0.131074">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup> -->
+
+</Project>

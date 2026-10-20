@@ -3,7 +3,7 @@ using System.Text;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using MessageCheck;
-using Dodo.DataCatalog.Contracts.Products.v1;
+//using Dodo.DataCatalog.Contracts.Products.v1;
 
 // Наполняет топик тестовыми событиями.
 //   dotnet run                                   — учебные события в orders-multi: наши валидные, чужие и битые
