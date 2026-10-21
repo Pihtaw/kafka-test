@@ -10,5 +10,5 @@ if (!CliOptions.TryParse(args, DateTimeOffset.Now, out var opt, out var error))
     return Cli.Fail(error!);
 
 return opt!.Mode == RunMode.Execute
-    ? await ExecuteCommand.RunAsync(opt)
-    : await DryRunCommand.RunAsync(opt);
+    ? await ExecuteCommand.RunAsync(opt).ConfigureAwait(false)
+    : await DryRunCommand.RunAsync(opt).ConfigureAwait(false);

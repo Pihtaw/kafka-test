@@ -1,7 +1,7 @@
 ﻿using Confluent.Kafka;
 
 var mode = args.Length > 0 ? args[0] : "";
-if (mode != "before" && mode != "after")
+if (!string.Equals(mode, "before", StringComparison.Ordinal) && !string.Equals(mode, "after", StringComparison.Ordinal))
 {
     Console.WriteLine("Укажи режим: dotnet run -- after  или  dotnet run -- before");
     return;
@@ -27,11 +27,11 @@ try
         var r = consumer.Consume(TimeSpan.FromSeconds(15));
         if (r == null) { Console.WriteLine("Новых сообщений нет"); break; }
 
-        if (mode == "before") consumer.StoreOffset(r); // пометили ДО обработки
+        if (string.Equals(mode, "before", StringComparison.Ordinal)) consumer.StoreOffset(r); // пометили ДО обработки
 
         Process(r);
 
-        if (mode == "after") consumer.StoreOffset(r);  // пометили ПОСЛЕ обработки
+        if (string.Equals(mode, "after", StringComparison.Ordinal)) consumer.StoreOffset(r);  // пометили ПОСЛЕ обработки
     }
 }
 catch (Exception ex)

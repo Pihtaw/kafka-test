@@ -6,7 +6,7 @@ namespace MessageCheck.Tests;
 // отличия события от того, что увидит сервис после чтения контрактом
 public class JsonDiffTests
 {
-    private static List<Difference> Diff(string source, string result) => JsonDiff.Compare(Encoding.UTF8.GetBytes(source), result);
+    private static IReadOnlyList<Difference> Diff(string source, string result) => JsonDiff.Compare(Encoding.UTF8.GetBytes(source), result);
 
     [Fact]
     public void Same_json_has_no_differences() =>
@@ -59,8 +59,8 @@ public class JsonDiffTests
             """{"Lines":[{"Product":"pizza","Note":"x"}]}""",
             """{"Lines":[{"Product":"pizza","Quantity":0}]}""");
 
-        Assert.Contains(diffs, d => d.Path == "$.Lines[0].Note" && d.Kind == DifferenceKind.Extra);
-        Assert.Contains(diffs, d => d.Path == "$.Lines[0].Quantity" && d.Kind == DifferenceKind.MissingDefault);
+        Assert.Contains(diffs, d => string.Equals(d.Path, "$.Lines[0].Note", StringComparison.Ordinal) && d.Kind == DifferenceKind.Extra);
+        Assert.Contains(diffs, d => string.Equals(d.Path, "$.Lines[0].Quantity", StringComparison.Ordinal) && d.Kind == DifferenceKind.MissingDefault);
     }
 
     [Fact]

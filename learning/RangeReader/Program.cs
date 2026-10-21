@@ -10,8 +10,8 @@ if (args.Length < 3)
 }
 
 string topic = args[0];
-DateTimeOffset fromTime = DateTimeOffset.Parse(args[1]);
-DateTimeOffset toTime = DateTimeOffset.Parse(args[2]);
+DateTimeOffset fromTime = DateTimeOffset.Parse(args[1], System.Globalization.CultureInfo.InvariantCulture);
+DateTimeOffset toTime = DateTimeOffset.Parse(args[2], System.Globalization.CultureInfo.InvariantCulture);
 long fromMs = fromTime.ToUnixTimeMilliseconds();
 long toMs = toTime.ToUnixTimeMilliseconds();
 const string groupId = "test-group";
@@ -44,10 +44,10 @@ var partitions = topicMeta.Partitions
 Dictionary<int, long> low, high, fromOffsets, toOffsets;
 try
 {
-    low = await ListOffsets(OffsetSpec.Earliest());
-    high = await ListOffsets(OffsetSpec.Latest());
-    fromOffsets = await ListOffsets(OffsetSpec.ForTimestamp(fromMs));
-    toOffsets = await ListOffsets(OffsetSpec.ForTimestamp(toMs));
+    low = await ListOffsets(OffsetSpec.Earliest()).ConfigureAwait(false);
+    high = await ListOffsets(OffsetSpec.Latest()).ConfigureAwait(false);
+    fromOffsets = await ListOffsets(OffsetSpec.ForTimestamp(fromMs)).ConfigureAwait(false);
+    toOffsets = await ListOffsets(OffsetSpec.ForTimestamp(toMs)).ConfigureAwait(false);
 }
 catch (ListOffsetsException ex)
 {
@@ -126,7 +126,7 @@ while (notDone.Count > 0)
     long ts = r.Message.Timestamp.UnixTimestampMs;
     bool inWindow = ts >= fromMs && ts < toMs;
     if (!inWindow) outOfWindow++;
-    string time = DateTimeOffset.FromUnixTimeMilliseconds(ts).ToLocalTime().ToString("HH:mm:ss.fff");
+    string time = DateTimeOffset.FromUnixTimeMilliseconds(ts).ToLocalTime().ToString("HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
 
     var headers = r.Message.Headers == null
         ? ""
@@ -154,14 +154,14 @@ if (outOfWindow > 0)
 
 var after = GetCommitted(groupId, partitions);
 Console.WriteLine($"\n[ПОСЛЕ] закладки группы '{groupId}': {Format(after)}");
-Console.WriteLine(Format(before) == Format(after)
-    ? "Закладки группы не изменились"
+Console.WriteLine(string.Equals(Format(before), Format(after)
+, StringComparison.Ordinal) ? "Закладки группы не изменились"
     : "Закладки группы изменились!");
 
 async Task<Dictionary<int, long>> ListOffsets(OffsetSpec spec)
 {
     var request = partitions.Select(tp => new TopicPartitionOffsetSpec { TopicPartition = tp, OffsetSpec = spec });
-    var result = await admin.ListOffsetsAsync(request);
+    var result = await admin.ListOffsetsAsync(request).ConfigureAwait(false);
     return result.ResultInfos.ToDictionary(
         info => info.TopicPartitionOffsetError.Partition.Value,
         info => info.TopicPartitionOffsetError.Offset.Value);
@@ -179,7 +179,7 @@ static Dictionary<int, string> GetCommitted(string groupId, List<TopicPartition>
     using var c = new ConsumerBuilder<Ignore, Ignore>(cfg).Build();
     return c.Committed(partitions, TimeSpan.FromSeconds(5)).ToDictionary(
         x => x.Partition.Value,
-        x => x.Offset == Offset.Unset ? "нет" : x.Offset.Value.ToString());
+        x => x.Offset == Offset.Unset ? "нет" : x.Offset.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
 }
 
 static string Format(Dictionary<int, string> offsets)

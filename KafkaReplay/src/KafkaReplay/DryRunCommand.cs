@@ -42,7 +42,7 @@ public static class DryRunCommand
 
         // план чтения
         List<PartitionPlan>? plan;
-        try { plan = await RangePlanner.PlanAsync(connection, opt.Topic!, fromMs, toMs); }
+        try { plan = await RangePlanner.PlanAsync(connection, opt.Topic!, fromMs, toMs).ConfigureAwait(false); }
         catch (KafkaException e) { return Cli.Fail($"нет связи с Kafka ({source.Describe()}): {e.Error.Reason}"); }
         if (plan is null) return ExitCodes.Blocked;
 
@@ -71,7 +71,7 @@ public static class DryRunCommand
                 cr.Message.Key,
                 cr.Message.Value);
 
-            var decision = await processor.ProcessAsync(record);
+            var decision = await processor.ProcessAsync(record).ConfigureAwait(false);
             string? eventType = decision.Verdict == Verdict.Allowed ? EventTypeOf(record) : null;
 
             // тип прочитался, но по реестру он в другом топике — не ошибка
@@ -79,7 +79,9 @@ public static class DryRunCommand
                 decision = decision with { Details = $"{decision.Details}; тип не объявлен в реестре для топика {opt.Topic}" };
 
             long ts = cr.Message.Timestamp.UnixTimestampMs;
-            string? contractVersion = eventType is null ? null : contracts is null ? "учебный" : contracts.VersionOf(eventType);
+            string? contractVersion = null;
+            if (eventType is not null)
+                contractVersion = contracts is null ? "учебный" : contracts.VersionOf(eventType);
             var entry = ReportEntry.From(cr, record, decision, outsideWindow: ts < fromMs || ts >= toMs, contractVersion);
 
             // в план попадают только разрешённые записи, для которых есть маршрут
@@ -99,8 +101,8 @@ public static class DryRunCommand
         }
 
         // сводка
-        var byVerdict = entries.GroupBy(e => e.Verdict).ToDictionary(g => g.Key, g => g.Count());
-        var byReason = entries.GroupBy(e => e.Reason).ToDictionary(g => g.Key, g => g.Count());
+        var byVerdict = entries.GroupBy(e => e.Verdict, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
+        var byReason = entries.GroupBy(e => e.Reason, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
         var byStatus = ReportSummary.ByStatus(entries);
         var rows = ReportSummary.Rows(entries);
 
@@ -122,7 +124,7 @@ public static class DryRunCommand
 
         Console.WriteLine($"\nПрочитано {entries.Count} записей, offsets в диапазоне: {expected}" + (gaps > 0 ? $" (без записей: {gaps})" : ""));
         Console.WriteLine($"Дочитаны партиции: {finished.Count} из {plan.Count}");
-        foreach (var (verdict, count) in byVerdict.OrderBy(x => x.Key)) Console.WriteLine($"  {verdict,-15} {count}");
+        foreach (var (verdict, count) in byVerdict.OrderBy(x => x.Key, StringComparer.Ordinal)) Console.WriteLine($"  {verdict,-15} {count}");
         if (warnings > 0) Console.WriteLine($"  ⚠ записей с опасными отличиями: {warnings} (поле молча стало значением по умолчанию или изменилось)");
         Console.WriteLine(allRead && sumMatches ? "✅ Сводка сходится" : "❌ Сводка НЕ сходится");
 
@@ -143,22 +145,22 @@ public static class DryRunCommand
             exitCode,
             records = entries
         };
-        string reportPath = await ReportWriter.WriteAsync(opt.OutDir, report);
+        string reportPath = await ReportWriter.WriteAsync(opt.OutDir, report).ConfigureAwait(false);
         string mdPath = await ReportMarkdown.WriteAsync(opt.OutDir, "report.md", ReportMarkdown.Build(
             "Отчёт KafkaReplay: проверка (ничего не отправлялось)",
             [("Источник", source.Describe()), ("Топик", opt.Topic!), ("Окно", $"[{opt.From:yyyy-MM-dd HH:mm:ss zzz} ; {opt.To:yyyy-MM-dd HH:mm:ss zzz})"),
              ("Контракты", contractsInfo), ("Цель", target?.Describe() ?? "нет (план не строился)")],
-            entries));
+            entries)).ConfigureAwait(false);
         Console.WriteLine($"Отчёт: {reportPath}");
         Console.WriteLine($"       {mdPath}");
 
         if (routes is not null)
         {
-            var notInPlan = entries.Where(e => e.TargetTopic is null).GroupBy(e => e.Status).ToDictionary(g => g.Key, g => g.Count());
+            var notInPlan = entries.Where(e => e.TargetTopic is null).GroupBy(e => e.Status, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
             var planFile = PlanFile.Create(DateTimeOffset.Now, opt.Topic!, source.Describe(), source.BootstrapServers,
                 target!.Describe(), target.BootstrapServers, opt.Partitioner.ToString().ToLowerInvariant(), contracts?.RegistryPath,
                 entries.Count, notInPlan, items);
-            string planPath = await PlanStore.SaveAsync(opt.OutDir, planFile);
+            string planPath = await PlanStore.SaveAsync(opt.OutDir, planFile).ConfigureAwait(false);
             Console.WriteLine($"План отправки: {planPath} — к отправке {items.Count} из {entries.Count}");
             Console.WriteLine($"Отправить: dotnet run -- --execute --plan {planPath} {(opt.TargetBootstrap is not null ? $"--target-bootstrap {opt.TargetBootstrap}" : $"--target-env {opt.TargetEnv}")}");
         }
@@ -169,7 +171,7 @@ public static class DryRunCommand
 
     // Event-Type уже проверен MessageCheck
     private static string? EventTypeOf(KafkaRecord r) =>
-        r.Headers.Where(h => h.Key == HeaderNames.EventType && h.Value is not null)
+        r.Headers.Where(h => string.Equals(h.Key, HeaderNames.EventType, StringComparison.Ordinal) && h.Value is not null)
                  .Select(h => System.Text.Encoding.UTF8.GetString(h.Value!)).FirstOrDefault();
 }
 

@@ -55,11 +55,11 @@ public record CliOptions(
     {
         options = null;
         bool execute = args.Contains("--execute");
-        var rest = args.Where(a => a != "--execute").ToArray();
+        var rest = args.Where(a => !string.Equals(a, "--execute", StringComparison.Ordinal)).ToArray();
         var known = execute ? ExecuteParams : DryRunParams;
 
-        var values = new Dictionary<string, string>();
-        for (int i = 0; i < rest.Length; i++)
+        var values = new Dictionary<string, string>(StringComparer.Ordinal);
+        for (int i = 0; i < rest.Length; i += 2)
         {
             string name = rest[i];
             if (!known.Contains(name))
@@ -69,9 +69,8 @@ public record CliOptions(
                     : $"неизвестный параметр {name}";
                 return false;
             }
-            if (i + 1 >= rest.Length || rest[i + 1].StartsWith("--")) { error = $"нет значения у {name}"; return false; }
+            if (i + 1 >= rest.Length || rest[i + 1].StartsWith("--", StringComparison.Ordinal)) { error = $"нет значения у {name}"; return false; }
             if (!values.TryAdd(name, rest[i + 1])) { error = $"{name} указан дважды"; return false; }
-            i++;
         }
 
         values.TryGetValue("--target-bootstrap", out var targetBootstrap);

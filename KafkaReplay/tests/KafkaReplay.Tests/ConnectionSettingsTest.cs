@@ -80,7 +80,7 @@ public class ConnectionSettingsTests
         var b = Parse("BootstrapServers=localhost:9092;").ToClientConfig();
         Assert.Equal(Flat(b), Flat(a));
 
-        static string Flat(ClientConfig c) => string.Join(";", c.OrderBy(x => x.Key).Select(x => $"{x.Key}={x.Value}"));
+        static string Flat(ClientConfig c) => string.Join(";", c.OrderBy(x => x.Key, StringComparer.Ordinal).Select(x => $"{x.Key}={x.Value}"));
     }
 
     [Fact]

@@ -7,15 +7,16 @@ namespace MessageCheck.Tests;
 // текст или байты в base64, valueBase64 для не UTF-8
 public record FixtureHeader(string Key, string? Value = null, string? ValueBase64 = null)
 {
-    public Header ToHeader() => new(Key,
-        ValueBase64 is not null ? Convert.FromBase64String(ValueBase64)
-        : Value is not null ? Encoding.UTF8.GetBytes(Value)
-        : null);
+    public Header ToHeader()
+    {
+        if (ValueBase64 is not null) return new(Key, Convert.FromBase64String(ValueBase64));
+        return new(Key, Value is null ? null : Encoding.UTF8.GetBytes(Value));
+    }
 }
 
 public record FixtureCase(
     string Name,
-    List<FixtureHeader> Headers,
+    IReadOnlyList<FixtureHeader> Headers,
     string? Payload,
     string ExpectedVerdict,
     string ExpectedReason)
@@ -52,7 +53,7 @@ public class ProcessorTests
 
         Assert.Equal(c.ExpectedVerdict, decision.Verdict.ToString());
         Assert.Equal(c.ExpectedReason, decision.Reason.ToString());
-        Assert.Equal(c.ExpectedVerdict == "Allowed", decision.CanSend);
+        Assert.Equal(string.Equals(c.ExpectedVerdict, "Allowed", StringComparison.Ordinal), decision.CanSend);
     }
 
     [Fact]

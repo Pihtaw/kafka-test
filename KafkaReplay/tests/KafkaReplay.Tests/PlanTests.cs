@@ -19,7 +19,7 @@ public class PlanTests
             .ToList();
         return PlanFile.Create(new DateTimeOffset(2026, 10, 15, 12, 0, 0, TimeSpan.FromHours(3)), "orders", "plain localhost:9092", "localhost:9092",
             "plain localhost:9092", "localhost:9092", "crc32", null, items + 2,
-            new Dictionary<string, int> { ["отклонено проверкой"] = 1, ["не отправлялось"] = 1 }, list);
+            new Dictionary<string, int>(StringComparer.Ordinal) { ["отклонено проверкой"] = 1, ["не отправлялось"] = 1 }, list);
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public class PlanTests
         var bad = plan with { Items = [plan.Items[0], tampered, plan.Items[2]] };
 
         var problems = bad.Verify();
-        Assert.Contains(problems, p => p.StartsWith("строка 1"));
+        Assert.Contains(problems, p => p.StartsWith("строка 1", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class PlanTests
     {
         var plan = MakePlan();
         var item = plan.Items[2];
-        var headers = item.Headers.Select(h => h.Key == "Event-PackageVersion" ? h with { Value = Convert.ToBase64String("9.9.9"u8.ToArray()) } : h).ToList();
+        var headers = item.Headers.Select(h => string.Equals(h.Key, "Event-PackageVersion", StringComparison.Ordinal) ? h with { Value = Convert.ToBase64String("9.9.9"u8.ToArray()) } : h).ToList();
         var bad = plan with { Items = [plan.Items[0], plan.Items[1], item with { Headers = headers }] };
         Assert.NotEmpty(bad.Verify());
     }

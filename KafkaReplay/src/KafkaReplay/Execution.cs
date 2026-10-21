@@ -36,7 +36,7 @@ public static class Executor
 
     public static async Task<ExecutionFile> RunAsync(PlanFile plan, ExecutionFile? previous, IPlanSender sender, Action<ExecutionFile> save, DateTimeOffset now)
     {
-        if (previous is not null && previous.PlanSha256 != plan.PlanSha256)
+        if (previous is not null && !string.Equals(previous.PlanSha256, plan.PlanSha256, StringComparison.Ordinal))
             throw new InvalidOperationException("execution.json относится к другому плану");
 
         var states = (previous?.Items ?? []).ToDictionary(s => s.Index);
@@ -46,7 +46,7 @@ public static class Executor
             states[item.Index] = new ItemState(item.Index, item.ItemSha256, DeliveryStatus.Unknown, null, null, "отправка начата, результата нет", now);
         save(Snapshot());
 
-        var outcomes = batch.Count == 0 ? [] : await sender.SendAsync(batch);
+        var outcomes = batch.Count == 0 ? [] : await sender.SendAsync(batch).ConfigureAwait(false);
         foreach (var o in outcomes)
             states[o.Index] = new ItemState(o.Index, plan.Items[o.Index].ItemSha256, o.Status, o.Partition, o.Offset, o.Error, now);
 
@@ -100,7 +100,7 @@ public sealed class KafkaPlanSender(ClientConfig target) : IPlanSender
             if (failed is not null) { outcomes.Add(failed); continue; }
             try
             {
-                var dr = await task!;
+                var dr = await task!.ConfigureAwait(false);
                 outcomes.Add(new SendOutcome(item.Index, Map(dr.Status), dr.Partition.Value, dr.Offset.Value, null));
             }
             catch (ProduceException<byte[]?, byte[]?> e)

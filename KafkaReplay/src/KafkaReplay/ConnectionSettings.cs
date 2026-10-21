@@ -47,7 +47,7 @@ public sealed class ConnectionSettings
 
         string type = fields.TryGetValue("Type", out var t) ? t.ToLowerInvariant() : "plain";
 
-        if (type == "eventhubad")
+        if (string.Equals(type, "eventhubad", StringComparison.Ordinal))
         {
             // токен для AD берётся через DefaultAzureCredential (Azure.Identity).
             // TODO: добавить когда будет

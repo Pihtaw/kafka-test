@@ -26,27 +26,27 @@ public class ChecksumsTests
         var b = Record("101", """{"OrderId":101}""", ("Event-Type", "B"));
 
         Assert.Equal(Checksums.Payload(a.Payload), Checksums.Payload(b.Payload));
-        Assert.NotEqual(Checksums.Record(a), Checksums.Record(b));
+        Assert.NotEqual(Checksums.Record(a), Checksums.Record(b), StringComparer.Ordinal);
     }
 
     [Fact]
     public void Key_change_changes_record_hash() =>
-        Assert.NotEqual(Checksums.Record(Record("101", "{}")), Checksums.Record(Record("102", "{}")));
+        Assert.NotEqual(Checksums.Record(Record("101", "{}")), Checksums.Record(Record("102", "{}")), StringComparer.Ordinal);
 
     [Fact]
     public void Header_order_matters() =>
         Assert.NotEqual(
             Checksums.Record(Record("k", "{}", ("a", "1"), ("b", "2"))),
-            Checksums.Record(Record("k", "{}", ("b", "2"), ("a", "1"))));
+            Checksums.Record(Record("k", "{}", ("b", "2"), ("a", "1"))), StringComparer.Ordinal);
 
     [Fact]
     public void Null_and_empty_differ() =>
-        Assert.NotEqual(Checksums.Record(Record(null, "{}")), Checksums.Record(Record("", "{}")));
+        Assert.NotEqual(Checksums.Record(Record(null, "{}")), Checksums.Record(Record("", "{}")), StringComparer.Ordinal);
 
     [Fact]
     public void Moving_bytes_between_parts_changes_hash() =>
         // без длин "ab"+"c" и "a"+"bc" склеились бы одинаково
-        Assert.NotEqual(Checksums.Record(Record("ab", "c")), Checksums.Record(Record("a", "bc")));
+        Assert.NotEqual(Checksums.Record(Record("ab", "c")), Checksums.Record(Record("a", "bc")), StringComparer.Ordinal);
 
     [Fact]
     public void Same_record_gives_same_hash() =>

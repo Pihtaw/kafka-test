@@ -24,7 +24,7 @@ public class ExecutorTests
     }
 
     private static async Task<ExecutionFile> Run(PlanFile plan, ExecutionFile? previous, FakeSender sender, List<ExecutionFile>? saves = null) =>
-        await Executor.RunAsync(plan, previous, sender, s => saves?.Add(s), Now);
+        await Executor.RunAsync(plan, previous, sender, s => saves?.Add(s), Now).ConfigureAwait(false);
 
     [Fact]
     public async Task All_written()
@@ -131,7 +131,7 @@ public class ExecutorTests
         var actual = Fetched(item) with { Payload = "{}"u8.ToArray() };
         var v = ByteCompare.Compare(item, actual);
         Assert.False(v.Matches);
-        Assert.Contains("тело отличается", v.Differences);
+        Assert.Contains("тело отличается", v.Differences, StringComparer.Ordinal);
     }
 
     [Fact]

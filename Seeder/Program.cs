@@ -14,12 +14,14 @@ using MessageCheck;
 
 string? contractsPath = null;
 var positional = new List<string>();
-for (int i = 0; i < args.Length; i++)
+int i = 0;
+while (i < args.Length)
 {
-    if (args[i] == "--contracts" && i + 1 < args.Length) contractsPath = args[++i];
+    if (string.Equals(args[i], "--contracts", StringComparison.Ordinal) && i + 1 < args.Length) contractsPath = args[++i];
     else positional.Add(args[i]);
 }
-string topic = positional.Count > 0 ? positional[0] : contractsPath is null ? "orders-multi" : "registry-events";
+string defaultTopic = contractsPath is null ? "orders-multi" : "registry-events";
+string topic = positional.Count > 0 ? positional[0] : defaultTopic;
 const string bootstrap = "localhost:9092";
 const string copyTopic = "orders-copy"; // цель для демо отправки (KafkaReplay/samples/routes.json)
 
@@ -29,7 +31,7 @@ using (var admin = new AdminClientBuilder(new AdminClientConfig { BootstrapServe
     {
         try
         {
-            await admin.CreateTopicsAsync([new TopicSpecification { Name = name, NumPartitions = 3, ReplicationFactor = 1 }]);
+            await admin.CreateTopicsAsync([new TopicSpecification { Name = name, NumPartitions = 3, ReplicationFactor = 1 }]).ConfigureAwait(false);
             Console.WriteLine($"Создан топик {name} (3 партиции)");
         }
         catch (CreateTopicsException e) when (e.Results.All(r => r.Error.Code == ErrorCode.TopicAlreadyExists))
@@ -85,7 +87,7 @@ using var producer = new ProducerBuilder<string, string>(new ProducerConfig { Bo
 var before = DateTimeOffset.Now;
 foreach (var m in messages)
 {
-    var r = await producer.ProduceAsync(topic, new Message<string, string> { Key = m.Key, Value = m.Payload!, Headers = m.Headers });
+    var r = await producer.ProduceAsync(topic, new Message<string, string> { Key = m.Key, Value = m.Payload!, Headers = m.Headers }).ConfigureAwait(false);
     Console.WriteLine($"p{r.Partition.Value} o{r.Offset.Value} key={m.Key,-4} {m.Comment}");
 }
 var after = DateTimeOffset.Now.AddSeconds(1);
@@ -109,7 +111,7 @@ static (string Key, Headers Headers, string? Payload, string Comment)[] FromCont
 {
     var result = new List<(string, Headers, string?, string)>();
     int n = 0;
-    foreach (var name in contracts.EventTypesByTopic.Values.SelectMany(x => x).Distinct().Order(StringComparer.Ordinal))
+    foreach (var name in contracts.EventTypesByTopic.Values.SelectMany(x => x).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
     {
         if (!contracts.Catalog.TryGet(name, out var type)) continue;
         string version = contracts.VersionOf(name) ?? "?";
@@ -122,7 +124,7 @@ static (string Key, Headers Headers, string? Payload, string Comment)[] FromCont
                 { "Event-Type", Encoding.UTF8.GetBytes(name) },
                 { "Event-PackageVersion", Encoding.UTF8.GetBytes(version) }
             };
-            result.Add(((++n).ToString(), headers, json, $"{name} {version}"));
+            result.Add(((++n).ToString(System.Globalization.CultureInfo.InvariantCulture), headers, json, $"{name} {version}"));
         }
         catch (Exception e)
         {

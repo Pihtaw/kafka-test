@@ -9,7 +9,7 @@ public class SlowModule : IConverter
 {
     public async Task<object?> ConvertAsync(byte[] payload, Type dtoType, CancellationToken ct)
     {
-        await Task.Delay(TimeSpan.FromSeconds(10), ct);
+        await Task.Delay(TimeSpan.FromSeconds(10), ct).ConfigureAwait(false);
         return null;
     }
 }

@@ -28,7 +28,7 @@ public class Processor(EventCatalog catalog, IConverter converter, TimeSpan time
         {
             // TODO: ConvertAsync сейчас синхронный, проверить на настоящем
             using var cts = new CancellationTokenSource(timeout);
-            result = await converter.ConvertAsync(record.Payload, dtoType, cts.Token).WaitAsync(timeout);
+            result = await converter.ConvertAsync(record.Payload, dtoType, cts.Token).WaitAsync(timeout).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is TimeoutException or OperationCanceledException)
         {

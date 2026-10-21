@@ -28,7 +28,7 @@ public record Difference(string Path, DifferenceKind Kind, string? Source, strin
 public static class JsonDiff
 {
     // порядок полей и пробелы не важны, 1.0 и 1 — одно и то же число
-    public static List<Difference> Compare(byte[] sourceJson, string resultJson)
+    public static IReadOnlyList<Difference> Compare(byte[] sourceJson, string resultJson)
     {
         using var source = JsonDocument.Parse(sourceJson);
         using var result = JsonDocument.Parse(resultJson);
@@ -88,9 +88,10 @@ public static class JsonDiff
         if (a.ValueKind != b.ValueKind) return false;
         return a.ValueKind switch
         {
-            JsonValueKind.String => a.GetString() == b.GetString(),
+            JsonValueKind.String => string.Equals(a.GetString(), b.GetString(), StringComparison.Ordinal),
             JsonValueKind.True or JsonValueKind.False or JsonValueKind.Null => true,
-            _ => a.GetRawText() == b.GetRawText()
+            _ => string.Equals(a.GetRawText(), b.GetRawText()
+, StringComparison.Ordinal)
         };
     }
 

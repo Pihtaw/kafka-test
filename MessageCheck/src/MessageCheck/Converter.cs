@@ -27,14 +27,14 @@ public class JsonModule : IConverter
     public static string ToJson(object dto) => JsonSerializer.Serialize(dto, dto.GetType(), Options);
 
     // поля верхнего уровня, которые есть в событии, но которых нет в контракте (их пропустили)
-    public static List<string> ExtraFields(byte[] payload, string resultJson)
+    public static IReadOnlyList<string> ExtraFields(byte[] payload, string resultJson)
     {
         using var sent = JsonDocument.Parse(payload);
         using var read = JsonDocument.Parse(resultJson);
         if (sent.RootElement.ValueKind != JsonValueKind.Object || read.RootElement.ValueKind != JsonValueKind.Object)
             return [];
 
-        var known = read.RootElement.EnumerateObject().Select(p => p.Name).ToHashSet();
+        var known = read.RootElement.EnumerateObject().Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
         return sent.RootElement.EnumerateObject().Select(p => p.Name).Where(n => !known.Contains(n)).ToList();
     }
 }

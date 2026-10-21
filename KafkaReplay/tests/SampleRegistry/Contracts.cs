@@ -5,7 +5,7 @@ public class OrderCreated
     public required long OrderId { get; init; }
     public required decimal Amount { get; init; }
     public string? Currency { get; init; }
-    public List<OrderLine> Lines { get; init; } = [];
+    public IReadOnlyList<OrderLine> Lines { get; init; } = [];
 }
 
 // вложенный тип: используется внутри OrderCreated, сам событием не является

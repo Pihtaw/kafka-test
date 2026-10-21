@@ -19,7 +19,7 @@ public static class HeaderReader
         value = "";
         fail = null;
 
-        var found = headers.Where(h => h.Key == name).ToList();
+        var found = headers.Where(h => string.Equals(h.Key, name, StringComparison.Ordinal)).ToList();
         if (found.Count == 0)
         {
             fail = new Decision(Verdict.Rejected, missingReason, $"нет заголовка {name}");
@@ -34,33 +34,29 @@ public static class HeaderReader
         }
 
         // проверка на пустоту и UTF-8
-        var values = new List<string>();
-        foreach (var h in found)
+        var h = found[0];
+        if (h.Value is null || h.Value.Length == 0)
         {
-            if (h.Value is null || h.Value.Length == 0)
-            {
-                fail = new Decision(Verdict.Rejected, Reason.EmptyHeader, $"заголовок {name} пустой");
-                return false;
-            }
-
-            string text;
-            try { text = StrictUtf8.GetString(h.Value); }
-            catch (DecoderFallbackException)
-            {
-                fail = new Decision(Verdict.Rejected, Reason.InvalidHeaderEncoding,
-                    $"заголовок {name} не UTF-8: {Convert.ToHexString(h.Value)}");
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                fail = new Decision(Verdict.Rejected, Reason.EmptyHeader, $"заголовок {name} из одних пробелов");
-                return false;
-            }
-            values.Add(text);
+            fail = new Decision(Verdict.Rejected, Reason.EmptyHeader, $"заголовок {name} пустой");
+            return false;
         }
 
-        value = values[0];
+        string text;
+        try { text = StrictUtf8.GetString(h.Value); }
+        catch (DecoderFallbackException)
+        {
+            fail = new Decision(Verdict.Rejected, Reason.InvalidHeaderEncoding,
+                $"заголовок {name} не UTF-8: {Convert.ToHexString(h.Value)}");
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            fail = new Decision(Verdict.Rejected, Reason.EmptyHeader, $"заголовок {name} из одних пробелов");
+            return false;
+        }
+
+        value = text;
         return true;
     }
 
@@ -73,7 +69,7 @@ public static class HeaderReader
     {
         value = null;
         fail = null;
-        if (!headers.Any(h => h.Key == name))
+        if (!headers.Any(h => string.Equals(h.Key, name, StringComparison.Ordinal)))
             return true;
 
         if (!TryRead(headers, name, Reason.EmptyHeader, out var text, out fail))

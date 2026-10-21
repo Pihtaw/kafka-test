@@ -67,12 +67,14 @@ public static class Partitioning
             h *= m; h ^= k;
         }
 
-        switch (length % 4)
-        {
-            case 3: h ^= (uint)data[i + 2] << 16; goto case 2;
-            case 2: h ^= (uint)data[i + 1] << 8; goto case 1;
-            case 1: h ^= data[i]; h *= m; break;
-        }
+        #pragma warning disable S907 // goto case — стандартный хвост murmur2, как в исходниках Kafka
+            switch (length % 4)
+            {
+                case 3: h ^= (uint)data[i + 2] << 16; goto case 2;
+                case 2: h ^= (uint)data[i + 1] << 8; goto case 1;
+                case 1: h ^= data[i]; h *= m; break;
+            }
+        #pragma warning restore S907
 
         h ^= h >> 13; h *= m; h ^= h >> 15;
         return (int)h;

@@ -19,18 +19,18 @@ public static class RangePlanner
 
         var partitions = meta.Partitions.Select(p => new TopicPartition(topic, p.PartitionId)).OrderBy(tp => tp.Partition.Value).ToList();
 
-        async Task<Dictionary<int, long>> List(OffsetSpec spec)
+        async Task<Dictionary<int, long>> ListAsync(OffsetSpec spec)
         {
             var res = await admin.ListOffsetsAsync(
                 partitions.Select(tp => new TopicPartitionOffsetSpec { TopicPartition = tp, OffsetSpec = spec }),
-                new ListOffsetsOptions { RequestTimeout = RequestTimeout });
+                new ListOffsetsOptions { RequestTimeout = RequestTimeout }).ConfigureAwait(false);
             return res.ResultInfos.ToDictionary(i => i.TopicPartitionOffsetError.Partition.Value, i => i.TopicPartitionOffsetError.Offset.Value);
         }
 
-        var low = await List(OffsetSpec.Earliest());
-        var high = await List(OffsetSpec.Latest());
-        var from = await List(OffsetSpec.ForTimestamp(fromMs));
-        var to = await List(OffsetSpec.ForTimestamp(toMs));
+        var low = await ListAsync(OffsetSpec.Earliest()).ConfigureAwait(false);
+        var high = await ListAsync(OffsetSpec.Latest()).ConfigureAwait(false);
+        var from = await ListAsync(OffsetSpec.ForTimestamp(fromMs)).ConfigureAwait(false);
+        var to = await ListAsync(OffsetSpec.ForTimestamp(toMs)).ConfigureAwait(false);
 
         return partitions.Select(tp =>
         {
@@ -76,7 +76,14 @@ public static class RangePlanner
             if (cr is null) { Console.WriteLine($"Таймаут: не дочитаны партиции {string.Join(", ", notDone)}"); break; }
 
             int p = cr.Partition.Value;
-            if (cr.IsPartitionEOF) { if (cr.Offset.Value >= endOf[p]) Done(p, cr.TopicPartition); continue; }
+            if (cr.IsPartitionEOF)
+            {
+                if (cr.Offset.Value >= endOf[p])
+                {
+                    Done(p, cr.TopicPartition);
+                }
+                continue;
+            }
             if (cr.Offset.Value >= endOf[p]) { Done(p, cr.TopicPartition); continue; }
             yield return cr;
             if (cr.Offset.Value >= endOf[p] - 1) Done(p, cr.TopicPartition);

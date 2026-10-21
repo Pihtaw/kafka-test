@@ -29,7 +29,7 @@ public static class ByteCompare
         else
             for (int i = 0; i < expected.Headers.Count; i++)
             {
-                if (expected.Headers[i].Key != actual.Headers[i].Key) diffs.Add($"заголовок №{i + 1}: имя {actual.Headers[i].Key}, ожидали {expected.Headers[i].Key}");
+                if (!string.Equals(expected.Headers[i].Key, actual.Headers[i].Key, StringComparison.Ordinal)) diffs.Add($"заголовок №{i + 1}: имя {actual.Headers[i].Key}, ожидали {expected.Headers[i].Key}");
                 else if (!Same(expected.Headers[i].Value, actual.Headers[i].Value)) diffs.Add($"заголовок {expected.Headers[i].Key}: значение отличается");
             }
 

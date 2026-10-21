@@ -69,6 +69,13 @@ public static class ContractsLoader
             return false;
         }
 
+        return TryBuild(fullPath, registry, topics, out contracts, out error);
+    }
+
+    private static bool TryBuild(string fullPath, Assembly registry, List<(string Topic, IEnumerable<Type> Types)> topics,
+                                     out LoadedContracts? contracts, out string? error)
+    {
+        contracts = null;
         var catalog = new EventCatalog();
         var byTopic = new Dictionary<string, IReadOnlySet<string>>(StringComparer.Ordinal);
         var versions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -101,7 +108,7 @@ public static class ContractsLoader
     private static List<(string, IEnumerable<Type>)> ReadTopics(Assembly registry)
     {
         var result = new List<(string, IEnumerable<Type>)>();
-        foreach (var holder in registry.GetExportedTypes().Where(t => t.Name == "Topics" && t.IsAbstract && t.IsSealed)) // static class
+        foreach (var holder in registry.GetExportedTypes().Where(t => string.Equals(t.Name, "Topics", StringComparison.Ordinal) && t.IsAbstract && t.IsSealed)) // static class
         {
             foreach (var field in holder.GetFields(BindingFlags.Public | BindingFlags.Static))
             {
@@ -124,10 +131,10 @@ public static class ContractsLoader
 
     private sealed class ContractsLoadContext(string directory) : AssemblyLoadContext("kafka-replay-contracts")
     {
-        protected override Assembly? Load(AssemblyName name)
+        protected override Assembly? Load(AssemblyName assemblyName)
         {
-            string n = name.Name ?? "";
-            if (n is "System" or "mscorlib" or "netstandard" || n.StartsWith("System.") || n.StartsWith("Microsoft."))
+            string n = assemblyName.Name ?? "";
+            if (n is "System" or "mscorlib" or "netstandard" || n.StartsWith("System.", StringComparison.Ordinal) || n.StartsWith("Microsoft.", StringComparison.Ordinal))
                 return null; // null — взять из общего контекста
 
             string path = Path.Combine(directory, n + ".dll");

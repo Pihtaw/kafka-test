@@ -13,7 +13,7 @@ public static class ReportMarkdown
         md.AppendLine();
 
         // сводки
-        var byVerdict = entries.GroupBy(e => e.Verdict).OrderBy(g => g.Key).ToList();
+        var byVerdict = entries.GroupBy(e => e.Verdict, StringComparer.Ordinal).OrderBy(g => g.Key, StringComparer.Ordinal).ToList();
         var byStatus = ReportSummary.ByStatus(entries);
         var rows = ReportSummary.Rows(entries);
         int total = entries.Count, sumVerdict = byVerdict.Sum(g => g.Count()), sumStatus = byStatus.Values.Sum(), sumRows = rows.Sum(r => r.Count);
@@ -21,9 +21,9 @@ public static class ReportMarkdown
 
         md.AppendLine("## Сводка").AppendLine();
         md.AppendLine("| Решение | Записей |").AppendLine("|---|---|");
-        foreach (var g in byVerdict) md.AppendLine($"| {g.Key} | {g.Count()} |");
+        foreach (var g in byVerdict) md.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"| {g.Key} | {g.Count()} |");
         md.AppendLine().AppendLine("| Статус | Записей |").AppendLine("|---|---|");
-        foreach (var (status, count) in byStatus) md.AppendLine($"| {status} | {count} |");
+        foreach (var (status, count) in byStatus) md.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"| {status} | {count} |");
         md.AppendLine();
         md.AppendLine(converges
             ? $"✅ Сводки сходятся: записей {total}, по решениям {sumVerdict}, по статусам {sumStatus}, по строкам ниже {sumRows}."
@@ -32,7 +32,7 @@ public static class ReportMarkdown
 
         md.AppendLine("## По типам событий, версиям и целевым топикам").AppendLine();
         md.AppendLine("| Тип события | Версия пакета | Целевой топик | Статус | Записей |").AppendLine("|---|---|---|---|---|");
-        foreach (var r in rows) md.AppendLine($"| {Esc(r.EventType)} | {Esc(r.PackageVersion)} | {Esc(r.TargetTopic)} | {r.Status} | {r.Count} |");
+        foreach (var r in rows) md.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"| {Esc(r.EventType)} | {Esc(r.PackageVersion)} | {Esc(r.TargetTopic)} | {r.Status} | {r.Count} |");
         md.AppendLine();
 
         md.AppendLine("## Записи").AppendLine();
@@ -41,8 +41,9 @@ public static class ReportMarkdown
         {
             string versions = $"{e.PackageVersion ?? "—"} → {e.ContractVersion ?? "—"}";
             string target = e.TargetTopic is null ? "—" : $"{e.TargetTopic} / p{e.TargetPartition}";
-            string diffs = e.Differences.Count == 0 ? "нет" : $"{e.Differences.Count}{(e.HasWarnings ? " ⚠" : "")}";
-            md.AppendLine($"| p{e.Partition} o{e.Offset} | {Esc(ShortType(e.EventType))} | {Esc(versions)} | {e.Verdict} | {e.Reason} | {e.Status} | {Esc(target)} | {diffs} |");
+            string warn = e.HasWarnings ? " ⚠" : "";
+            string diffs = e.Differences.Count == 0 ? "нет" : $"{e.Differences.Count}{warn}";
+            md.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"| p{e.Partition} o{e.Offset} | {Esc(ShortType(e.EventType))} | {Esc(versions)} | {e.Verdict} | {e.Reason} | {e.Status} | {Esc(target)} | {diffs} |");
         }
         md.AppendLine();
 
@@ -50,7 +51,7 @@ public static class ReportMarkdown
         md.AppendLine("## Подробно").AppendLine();
         foreach (var e in entries)
         {
-            md.AppendLine($"### p{e.Partition} o{e.Offset} — {Esc(ShortType(e.EventType))}: {e.Verdict} / {e.Status}").AppendLine();
+            md.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"### p{e.Partition} o{e.Offset} — {Esc(ShortType(e.EventType))}: {e.Verdict} / {e.Status}").AppendLine();
             md.AppendLine($"- **Решение:** {e.Verdict}, причина {e.Reason}{(e.Details is null ? "" : $" — {Esc(e.Details)}")}");
             md.AppendLine($"- **Исходное сообщение:** ключ `{Esc(e.Key ?? "null")}`, заголовки: {Esc(string.Join(", ", e.Headers.Select(h => $"{h.Key}={h.Value ?? "null"}")))}");
             md.AppendLine($"- **Тело:** `{Esc(Short(e.Payload ?? "null (tombstone)"))}`");
@@ -70,7 +71,7 @@ public static class ReportMarkdown
     {
         Directory.CreateDirectory(outDir);
         string path = Path.Combine(outDir, fileName);
-        await File.WriteAllTextAsync(path, content);
+        await File.WriteAllTextAsync(path, content).ConfigureAwait(false);
         return Path.GetFullPath(path);
     }
 

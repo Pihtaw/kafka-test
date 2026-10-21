@@ -15,9 +15,13 @@ public sealed class Routes
     public const string Default = "*";
     private readonly Dictionary<string, string> _routes;
 
-    private Routes(Dictionary<string, string> routes) => _routes = routes;
+    private Routes(Dictionary<string, string> routes)
+    {
+        _routes = routes;
+        TargetTopics = routes.Values.Distinct(StringComparer.Ordinal).ToList();
+    }
 
-    public IReadOnlyCollection<string> TargetTopics => _routes.Values.Distinct(StringComparer.Ordinal).ToList();
+    public IReadOnlyCollection<string> TargetTopics { get; }
     public IReadOnlyDictionary<string, string> All => _routes;
 
     public string? TargetFor(string eventType) =>
@@ -73,7 +77,7 @@ public sealed class Routes
                       .Select(r => $"{r.Key} → {r.Value}").ToList();
     }
 
-    public static bool SameCluster(string a, string b) => Normalize(a) == Normalize(b);
+    public static bool SameCluster(string a, string b) => string.Equals(Normalize(a), Normalize(b), StringComparison.Ordinal);
 
     private static string Normalize(string bootstrap) =>
         string.Join(",", bootstrap.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)

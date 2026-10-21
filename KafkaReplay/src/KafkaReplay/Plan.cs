@@ -81,8 +81,8 @@ public record PlanFile(
 
     // подмена цели или партиционера в файле должна блокировать отправку
     public string ComputeSha256() => Checksums.Plan(
-        [FormatVersion.ToString(), CreatedAt.ToUnixTimeMilliseconds().ToString(), SourceTopic, SourceBootstrap, TargetBootstrap,
-         Partitioner, Contracts ?? "", TotalRecords.ToString(),
+        [FormatVersion.ToString(System.Globalization.CultureInfo.InvariantCulture), CreatedAt.ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture), SourceTopic, SourceBootstrap, TargetBootstrap,
+         Partitioner, Contracts ?? "", TotalRecords.ToString(System.Globalization.CultureInfo.InvariantCulture),
          string.Join(";", NotInPlan.OrderBy(x => x.Key, StringComparer.Ordinal).Select(x => $"{x.Key}={x.Value}"))],
         Items.Select(i => i.ItemSha256));
 
@@ -99,7 +99,7 @@ public record PlanFile(
             try
             {
                 string actual = Checksums.PlanItem(item.ToRecord(), item.TargetTopic, item.TargetPartition, item.TimestampMs);
-                if (actual != item.ItemSha256) problems.Add($"строка {i} (p{item.SourcePartition} o{item.SourceOffset}): сумма не совпадает");
+                if (!string.Equals(actual, item.ItemSha256, StringComparison.Ordinal)) problems.Add($"строка {i} (p{item.SourcePartition} o{item.SourceOffset}): сумма не совпадает");
             }
             catch (FormatException)
             {
@@ -107,7 +107,7 @@ public record PlanFile(
             }
         }
 
-        if (ComputeSha256() != PlanSha256) problems.Add("сумма всего плана не совпадает (изменена шапка, порядок или состав строк)");
+        if (!string.Equals(ComputeSha256(), PlanSha256, StringComparison.Ordinal)) problems.Add("сумма всего плана не совпадает (изменена шапка, порядок или состав строк)");
         return problems;
     }
 }
@@ -126,7 +126,7 @@ public static class PlanStore
     {
         Directory.CreateDirectory(outDir);
         string path = Path.Combine(outDir, "plan.json");
-        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(plan, Options));
+        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(plan, Options)).ConfigureAwait(false);
         return Path.GetFullPath(path);
     }
 

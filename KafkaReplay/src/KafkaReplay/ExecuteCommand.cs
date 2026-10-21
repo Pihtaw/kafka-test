@@ -7,6 +7,9 @@ namespace KafkaReplay;
 // проверить план целиком -> отправить -> побайтово сверить отправленное -> статусы и отчeт
 public static class ExecuteCommand
 {
+    private static string VerifyText(VerifyResult v) =>
+        v.Matches ? "байты совпали" : "❌ " + string.Join("; ", v.Differences);
+
     public static async Task<int> RunAsync(CliOptions opt)
     {
         if (!PlanStore.TryLoad(opt.Plan!, out var plan, out var error)) return Cli.Fail(error!);
@@ -23,7 +26,7 @@ public static class ExecuteCommand
 
         if (Routes.SameCluster(plan.SourceBootstrap, plan.TargetBootstrap))
         {
-            var back = plan.Items.Where(i => i.TargetTopic == plan.SourceTopic).Select(i => $"p{i.SourcePartition} o{i.SourceOffset}").ToList();
+            var back = plan.Items.Where(i => string.Equals(i.TargetTopic, plan.SourceTopic, StringComparison.Ordinal)).Select(i => $"p{i.SourcePartition} o{i.SourceOffset}").ToList();
             if (back.Count > 0) return Cli.Block($"в плане есть отправка в топик-источник {plan.SourceTopic}: {string.Join(", ", back)}");
         }
 
@@ -31,7 +34,7 @@ public static class ExecuteCommand
         ExecutionFile? previous;
         try { previous = ExecutionFile.Load(statePath); }
         catch (System.Text.Json.JsonException e) { return Cli.Block($"{statePath} испорчен: {e.Message}"); }
-        if (previous is not null && previous.PlanSha256 != plan.PlanSha256)
+        if (previous is not null && !string.Equals(previous.PlanSha256, plan.PlanSha256, StringComparison.Ordinal))
             return Cli.Block($"{statePath} относится к другому плану");
 
         var connection = target.ToClientConfig();
@@ -43,7 +46,7 @@ public static class ExecuteCommand
 
         // отправка
         ExecutionFile state;
-        try { state = await Executor.RunAsync(plan, previous, new KafkaPlanSender(connection), s => s.Save(statePath), DateTimeOffset.Now); }
+        try { state = await Executor.RunAsync(plan, previous, new KafkaPlanSender(connection), s => s.Save(statePath), DateTimeOffset.Now).ConfigureAwait(false); }
         catch (KafkaException e) { return Cli.Fail($"нет связи с целью ({target.Describe()}): {e.Error.Reason}"); }
 
         // побайтовая сверка
@@ -64,7 +67,7 @@ public static class ExecuteCommand
         // не попавшие в план + строки плана
         var byStatus = Enum.GetValues<DeliveryStatus>().ToDictionary(s => s, _ => 0);
         foreach (var (status, count) in plan.NotInPlan)
-            byStatus[Enum.GetValues<DeliveryStatus>().First(s => s.Ru() == status)] += count;
+            byStatus[Enum.GetValues<DeliveryStatus>().First(s => string.Equals(s.Ru(), status, StringComparison.Ordinal))] += count;
         foreach (var s in state.Items) byStatus[s.Status]++;
         int total = byStatus.Values.Sum();
         bool converges = total == plan.TotalRecords && state.Items.Count == plan.Items.Count;
@@ -80,7 +83,7 @@ public static class ExecuteCommand
             var v = verified.GetValueOrDefault(s.Index);
             Console.WriteLine($"  p{item.SourcePartition} o{item.SourceOffset,-3} → {item.TargetTopic}/p{item.TargetPartition}" +
                               $"{(s.Offset is null ? "" : $" o{s.Offset}"),-6} {s.Status.Ru(),-20}" +
-                              (v is null ? "" : v.Matches ? " байты совпали" : $" ❌ {string.Join("; ", v.Differences)}") +
+                              (v is null ? "" : " " + VerifyText(v)) +
                               (s.Error is null ? "" : $"  ({s.Error})"));
         }
         Console.WriteLine();
@@ -88,12 +91,17 @@ public static class ExecuteCommand
         Console.WriteLine($"Побайтовая сверка: совпало {matched} из {written} записанных" + (mismatched > 0 ? $", расхождений {mismatched}" : ""));
         Console.WriteLine(converges ? $"✅ Статусы сходятся: {total} из {plan.TotalRecords} записей" : $"❌ Статусы НЕ сходятся: {total} из {plan.TotalRecords}");
 
-        string mdPath = await ReportMarkdown.WriteAsync(Path.GetDirectoryName(statePath)!, "execution.md", BuildMarkdown(plan, state, byStatus, target, converges));
+        string mdPath = await ReportMarkdown.WriteAsync(Path.GetDirectoryName(statePath)!, "execution.md", BuildMarkdown(plan, state, byStatus, target, converges)).ConfigureAwait(false);
         Console.WriteLine($"Статусы: {statePath}");
         Console.WriteLine($"         {mdPath}");
 
         bool allGood = converges && written == plan.Items.Count && mismatched == 0 && matched == written;
-        int exitCode = !converges ? ExitCodes.Incomplete : allGood ? ExitCodes.Ok : ExitCodes.HasRejected;
+        int exitCode = (converges, allGood) switch
+        {
+            (false, _) => ExitCodes.Incomplete,
+            (true, true) => ExitCodes.Ok,
+            _ => ExitCodes.HasRejected,
+        };
         Console.WriteLine($"Код выхода {exitCode}: " + (exitCode switch
         {
             ExitCodes.Ok => "всё из плана записано и совпало байт в байт",
@@ -110,11 +118,11 @@ public static class ExecuteCommand
         md.AppendLine("# Отчёт KafkaReplay: отправка по плану").AppendLine();
         md.AppendLine($"- **Источник:** {plan.SourceDescription}, топик {plan.SourceTopic}");
         md.AppendLine($"- **Цель:** {target.Describe()}, партиционер {plan.Partitioner}");
-        md.AppendLine($"- **План:** создан {plan.CreatedAt:yyyy-MM-dd HH:mm:ss zzz}, строк {plan.Items.Count}, сумма `{plan.PlanSha256[..16]}…` совпала").AppendLine();
+        md.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"- **План:** создан {plan.CreatedAt:yyyy-MM-dd HH:mm:ss zzz}, строк {plan.Items.Count}, сумма `{plan.PlanSha256[..16]}…` совпала").AppendLine();
 
         md.AppendLine("## Статусы всех прочитанных записей").AppendLine();
         md.AppendLine("| Статус | Записей |").AppendLine("|---|---|");
-        foreach (var (status, count) in byStatus) md.AppendLine($"| {status.Ru()} | {count} |");
+        foreach (var (status, count) in byStatus) md.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"| {status.Ru()} | {count} |");
         md.AppendLine().AppendLine(converges ? $"✅ Сходится: {byStatus.Values.Sum()} из {plan.TotalRecords}" : $"❌ Не сходится: {byStatus.Values.Sum()} из {plan.TotalRecords}").AppendLine();
 
         md.AppendLine("## Строки плана").AppendLine();
@@ -123,8 +131,8 @@ public static class ExecuteCommand
         {
             var item = plan.Items[s.Index];
             var v = verified.GetValueOrDefault(s.Index);
-            string check = v is null ? "—" : v.Matches ? "совпало" : "❌ " + string.Join("; ", v.Differences);
-            md.AppendLine($"| p{item.SourcePartition} o{item.SourceOffset} | {ReportMarkdown.ShortType(item.EventType)} | {item.TargetTopic} / p{item.TargetPartition}{(s.Offset is null ? "" : $" o{s.Offset}")} | {s.Status.Ru()} | {check} |");
+            string check = v is null ? "—" : VerifyText(v);
+            md.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"| p{item.SourcePartition} o{item.SourceOffset} | {ReportMarkdown.ShortType(item.EventType)} | {item.TargetTopic} / p{item.TargetPartition}{(s.Offset is null ? "" : $" o{s.Offset}")} | {s.Status.Ru()} | {check} |");
         }
         return md.ToString();
     }

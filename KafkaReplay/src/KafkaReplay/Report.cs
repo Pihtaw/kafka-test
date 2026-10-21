@@ -46,7 +46,7 @@ public record ReportEntry(
     public ReportEntry WithStatus(DeliveryStatus status, string? targetTopic = null, int? targetPartition = null) =>
         this with { StatusCode = status, Status = status.Ru(), TargetTopic = targetTopic, TargetPartition = targetPartition };
 
-    public bool IsRejected => Verdict == nameof(MessageCheck.Verdict.Rejected) || Verdict == nameof(MessageCheck.Verdict.ConversionError);
+    public bool IsRejected => string.Equals(Verdict, nameof(MessageCheck.Verdict.Rejected), StringComparison.Ordinal) || string.Equals(Verdict, nameof(MessageCheck.Verdict.ConversionError), StringComparison.Ordinal);
     public bool HasWarnings => Differences.Any(x => x.Warning);
 
     private static (List<ReportDifference>, string?) DifferencesOf(KafkaRecord r, Decision d)
@@ -67,7 +67,7 @@ public record ReportEntry(
     }
 
     private static string? FirstHeader(KafkaRecord r, string name) =>
-        r.Headers.Where(h => h.Key == name && h.Value is { Length: > 0 }).Select(h => Text(h.Value!)).FirstOrDefault();
+        r.Headers.Where(h => string.Equals(h.Key, name, StringComparison.Ordinal) && h.Value is { Length: > 0 }).Select(h => Text(h.Value!)).FirstOrDefault();
 
     // текст, если это UTF-8, иначе hex
     private static string Text(byte[] bytes)
@@ -88,11 +88,11 @@ public static class ReportSummary
     public static List<SummaryRow> Rows(IEnumerable<ReportEntry> entries) =>
         entries.GroupBy(e => (Type: e.EventType ?? "—", Version: e.PackageVersion ?? "—", Target: e.TargetTopic ?? "—", e.Status))
                .Select(g => new SummaryRow(g.Key.Type, g.Key.Version, g.Key.Target, g.Key.Status, g.Count()))
-               .OrderBy(r => r.EventType, StringComparer.Ordinal).ThenBy(r => r.PackageVersion).ThenBy(r => r.TargetTopic).ThenBy(r => r.Status)
+               .OrderBy(r => r.EventType, StringComparer.Ordinal).ThenBy(r => r.PackageVersion, StringComparer.Ordinal).ThenBy(r => r.TargetTopic, StringComparer.Ordinal).ThenBy(r => r.Status, StringComparer.Ordinal)
                .ToList();
 
     public static Dictionary<string, int> ByStatus(IEnumerable<ReportEntry> entries) =>
-        Enum.GetValues<DeliveryStatus>().ToDictionary(s => s.Ru(), s => entries.Count(e => e.StatusCode == s));
+        Enum.GetValues<DeliveryStatus>().ToDictionary(s => s.Ru(), s => entries.Count(e => e.StatusCode == s), StringComparer.Ordinal);
 }
 
 public static class ReportWriter
@@ -109,7 +109,7 @@ public static class ReportWriter
     {
         Directory.CreateDirectory(outDir);
         string path = Path.Combine(outDir, "report.json");
-        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(report, Options));
+        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(report, Options)).ConfigureAwait(false);
         return Path.GetFullPath(path);
     }
 }
