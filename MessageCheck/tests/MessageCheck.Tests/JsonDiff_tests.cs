@@ -65,5 +65,19 @@ public class JsonDiffTests
 
     [Fact]
     public void No_differences_reason_names_field_count() =>
-        Assert.Contains("все поля события (2)", JsonDiff.NoDifferencesReason(Encoding.UTF8.GetBytes("""{"OrderId":1,"Amount":500}""")));
+    Assert.Contains("все поля события (2)", JsonDiff.NoDifferencesReason(Encoding.UTF8.GetBytes("""{"OrderId":1,"Amount":500}""")));
+
+    [Fact]
+    public void Not_a_uuid_in_other_case_is_still_a_change()
+    {
+        var d = Diff("""{"Id":"11AAAAAAAABBBBBBBBCCCCCC"}""", """{"Id":"11aaaaaaaabbbbbbbbcccccc"}""");
+        Assert.Equal(DifferenceKind.Changed, Assert.Single(d).Kind);
+    }
+
+    [Fact]
+    public void Text_in_other_case_is_still_a_change()
+    {
+        var d = Diff("""{"Name":"Moscow"}""", """{"Name":"moscow"}""");
+        Assert.Equal(DifferenceKind.Changed, Assert.Single(d).Kind);
+    }
 }

@@ -7,7 +7,8 @@ public enum DifferenceKind
     Extra,          // поле есть в событии, контракт о нем не знает — сервис его пропустит
     MissingNull,    // поля нет в событии, сервис увидит null — обычно это новое необязательное поле
     MissingDefault, // поля нет в событии, сервис увидит 0 / "" / false — опасно: выглядит как настоящее значение
-    Changed         // поле есть, но после чтения значение другое (тип, округление, формат)
+    Changed,         // поле есть, но после чтения значение другое (тип, округление, формат)
+    Formatted
 }
 
 public record Difference(string Path, DifferenceKind Kind, string? Source, string? Result)
@@ -18,6 +19,7 @@ public record Difference(string Path, DifferenceKind Kind, string? Source, strin
         DifferenceKind.MissingNull => $"{Path}: поля нет в событии, сервис увидит null",
         DifferenceKind.MissingDefault => $"{Path}: поля нет в событии, сервис молча увидит {Result}",
         DifferenceKind.Changed => $"{Path}: было {Source}, сервис увидит {Result}",
+        DifferenceKind.Formatted => $"{Path}: то же значение в другой записи ({Source} → {Result})",
         _ => Path
     };
 
@@ -73,9 +75,16 @@ public static class JsonDiff
             return;
         }
 
-        if (!SameValue(source, result))
-            diffs.Add(new Difference(path, DifferenceKind.Changed, Short(source), Short(result)));
+        if (SameValue(source, result)) return;
+        var changeKind = SameUuid(source, result) ? DifferenceKind.Formatted : DifferenceKind.Changed;
+        diffs.Add(new Difference(path, changeKind, Short(source), Short(result)));
     }
+
+    // один и тот же UUID в другом регистре или формате
+    private static bool SameUuid(JsonElement a, JsonElement b) =>
+        a.ValueKind == JsonValueKind.String && b.ValueKind == JsonValueKind.String
+        && Guid.TryParse(a.GetString(), out var x) && Guid.TryParse(b.GetString(), out var y)
+        && x == y;
 
     private static bool SameValue(JsonElement a, JsonElement b)
     {
