@@ -51,7 +51,8 @@ def key_bytes(shown: str | None) -> bytes | None:
 
 def outcome(r) -> tuple:
     diffs = tuple(sorted((d["path"], d["kind"]) for d in r["differences"]))
-    return (r["recordSha256"], r["verdict"], r["reason"], diffs)
+    formatted = (r.get("formatted") or {}).get("count", 0)
+    return (r["recordSha256"], r["verdict"], r["reason"], diffs, formatted)
 
 
 def main() -> None:

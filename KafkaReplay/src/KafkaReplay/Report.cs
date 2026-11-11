@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using Confluent.Kafka;
 using MessageCheck;
@@ -13,7 +14,7 @@ public record ReportEntry(
     string? PayloadSha256, string RecordSha256,
     string? EventType, string? PackageVersion, string? ContractVersion,
     string Verdict, string Reason, string? Details, string? ResultJson,
-    List<ReportDifference> Differences, string? DifferencesNote,
+    [property: JsonIgnore] List<ReportDifference> Differences, string? DifferencesNote,
     DeliveryStatus StatusCode, string Status, string? TargetTopic, int? TargetPartition)
 {
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
@@ -49,6 +50,13 @@ public record ReportEntry(
     public bool IsRejected => string.Equals(Verdict, nameof(MessageCheck.Verdict.Rejected), StringComparison.Ordinal) || string.Equals(Verdict, nameof(MessageCheck.Verdict.ConversionError), StringComparison.Ordinal);
     public bool HasWarnings => Differences.Any(x => x.Warning);
 
+    // в report.json: настоящие отличия — полностью, Formatted — сводкой, как в report.md.
+    // Иначе на реальных данных Formatted занимает сотни мегабайт: UUID в другом регистре, сотни на запись
+    [JsonPropertyName("differences")]
+    public IEnumerable<ReportDifference> DifferencesForJson => Differences.Where(d => !ReportMarkdown.IsFormatted(d));
+
+    public FormattedSummary? Formatted => FormattedSummary.Of(Differences);
+
     private static (List<ReportDifference>, string?) DifferencesOf(KafkaRecord r, Decision d)
     {
         if (d.Verdict != MessageCheck.Verdict.Allowed || d.ResultJson is null || r.Payload is null)
@@ -81,6 +89,23 @@ public record ReportHeader(string Key, string? Value, string? Hex);
 
 public record ReportDifference(string Path, string Kind, string Text, bool Warning);
 
+public record FieldCount(string Field, int Count);
+
+// Formatted одной записи: сколько мест, в каких полях (индексы массивов схлопнуты) и один пример
+public record FormattedSummary(int Count, IReadOnlyList<FieldCount> Fields, string Example)
+{
+    public static FormattedSummary? Of(IReadOnlyList<ReportDifference> differences)
+    {
+        var formatted = differences.Where(ReportMarkdown.IsFormatted).ToList();
+        if (formatted.Count == 0) return null;
+        var fields = formatted
+            .GroupBy(d => ReportMarkdown.FieldPattern(d.Path), StringComparer.Ordinal)
+            .Select(g => new FieldCount(g.Key, g.Count()))
+            .ToList();
+        return new FormattedSummary(formatted.Count, fields, formatted[0].Text);
+    }
+}
+
 public record SummaryRow(string EventType, string PackageVersion, string TargetTopic, string Status, int Count);
 
 public static class ReportSummary
@@ -99,7 +124,7 @@ public static class ReportWriter
 {
     private static readonly JsonSerializerOptions Options = new()
     {
-        WriteIndented = true,
+        // без WriteIndented: на реальных данных отступы — пятая часть файла
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
         Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
