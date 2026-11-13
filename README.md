@@ -117,9 +117,10 @@ dotnet run -- --execute --plan run-…/plan.json --target-env REPLAY_TARGET
 ```bash
 cd <event-registry>
 git checkout <версия, которую проверяем>
-dotnet build src/Dodo.EventRegistry -c Release -o ~/replay-contracts -p:CopyLocalLockFileAssemblies=true
+cd <kafka-test>
+scripts/build-contracts.sh <event-registry>      # сборка ляжет в contracts/ (в git не попадает)
 
-dotnet run -- --bootstrap … --topic <топик> --from "…" --to "…" --contracts ~/replay-contracts/Dodo.EventRegistry.dll
+dotnet run -- --bootstrap … --topic <топик> --from "…" --to "…" --contracts contracts/Dodo.EventRegistry.dll
 ```
 
 - Контракты загружаются в отдельный `AssemblyLoadContext`; типы полей всех событий проверяются сразу, поэтому ошибка «не хватает сборки» будет до чтения топика.

@@ -11,3 +11,11 @@ learning/CrashTest/fixed.txt
 # результаты запусков утилиты
 run-*/
 report.json
+
+# сборка реестра контрактов компании — в публичный репозиторий не попадает
+contracts/*
+!contracts/README.md
+
+# локальные настройки стенда
+*.local.sh
+__pycache__/
