@@ -88,8 +88,15 @@ public static class ExecuteCommand
         int matched = state.Verification.Count(v => v.Matches);
         int mismatched = state.Verification.Count(v => !v.Matches);
 
+        // в консоль — только строки не «записано и совпало»; полный список в execution.md
+        const int MaxConsoleRows = 20;
+        var notable = state.Items.Where(s => s.Status != DeliveryStatus.Written || !(verified.TryGetValue(s.Index, out var vr) && vr.Matches)).ToList();
         Console.WriteLine();
-        foreach (var s in state.Items)
+        string more = notable.Count > MaxConsoleRows ? $", первые {MaxConsoleRows}" : "";
+        Console.WriteLine(notable.Count == 0
+            ? "Все строки плана записаны и совпали байт в байт — подробно в execution.md"
+            : $"Требуют внимания: {notable.Count} строк плана{more} — все строки в execution.md");
+        foreach (var s in notable.Take(MaxConsoleRows))
         {
             var item = plan.Items[s.Index];
             var v = verified.GetValueOrDefault(s.Index);

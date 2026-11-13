@@ -76,8 +76,9 @@ def main() -> None:
         problems += not ok
         print(("✅ " if ok else "❌ ") + text)
 
+    per_partition = collections.Counter(r["partition"] for r in B)   # реально прочитано, вместе с хвостом
     print(f"1 партиция: {len(A)} сообщений; {n} партиций: {len(B)} сообщений — " +
-          ", ".join(f"p{p['partition']}={p['end'] - p['start']}" for p in many["partitions"]))
+        ", ".join(f"p{p['partition']}={per_partition[p['partition']]}" for p in many["partitions"]))
     print(f"сводка 1 партиции: {one['summary']['byVerdict']}, опасных отличий {one['summary']['warnings']}")
     print(f"сводка {n} партиций: {many['summary']['byVerdict']}, опасных отличий {many['summary']['warnings']}")
     for name, rep in (("1 партиция", one), (f"{n} партиций", many)):
