@@ -49,7 +49,7 @@ public static class ReportMarkdown
         {
             string versions = $"{e.PackageVersion ?? "—"} → {e.ContractVersion ?? "—"}";
             string target = e.TargetTopic is null ? "—" : $"{e.TargetTopic} / p{e.TargetPartition}";
-            md.AppendLine(CultureInfo.InvariantCulture, $"| p{e.Partition} o{e.Offset} | {Esc(ShortType(e.EventType))} | {Esc(versions)} | {e.Verdict} | {e.Reason} | {e.Status} | {Esc(target)} | {DiffCell(e)} |");
+            md.AppendLine(CultureInfo.InvariantCulture, $"| p{e.Partition} o{e.Offset} | {Esc(ShortType(e.EventType))} | {Esc(versions)} | {e.Verdict}{OutsideMark(e)} | {e.Reason} | {e.Status} | {Esc(target)} | {DiffCell(e)} |");
         }
         md.AppendLine();
 
@@ -57,7 +57,8 @@ public static class ReportMarkdown
         md.AppendLine("## Подробно").AppendLine();
         foreach (var e in entries)
         {
-            md.AppendLine(CultureInfo.InvariantCulture, $"### p{e.Partition} o{e.Offset} — {Esc(ShortType(e.EventType))}: {e.Verdict} / {e.Status}").AppendLine();
+            md.AppendLine(CultureInfo.InvariantCulture, $"### p{e.Partition} o{e.Offset} — {Esc(ShortType(e.EventType))}: {e.Verdict} / {e.Status}{OutsideMark(e)}").AppendLine();
+            md.AppendLine(CultureInfo.InvariantCulture, $"- **Время записи:** {e.Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} ({e.TimestampType}){OutsideMark(e)}");
             md.AppendLine($"- **Решение:** {e.Verdict}, причина {e.Reason}{(e.Details is null ? "" : $" — {Esc(e.Details)}")}");
             md.AppendLine($"- **Исходное сообщение:** ключ `{Esc(e.Key ?? "null")}`, заголовки: {Esc(string.Join(", ", e.Headers.Select(h => $"{h.Key}={h.Value ?? "null"}")))}");
             md.AppendLine($"- **Тело:** `{Esc(Short(e.Payload ?? "null (tombstone)"))}`");
@@ -96,6 +97,9 @@ public static class ReportMarkdown
 
     public static bool IsFormatted(ReportDifference d) =>
         string.Equals(d.Kind, nameof(DifferenceKind.Formatted), StringComparison.Ordinal);
+
+    // запись лежит в диапазоне offsets окна, но её время вне окна («чужое внутри»)
+    private static string OutsideMark(ReportEntry e) => e.OutsideWindow ? " ⚠ время вне окна" : "";
 
     // ячейка «Отличия» в таблице записей: настоящие отличия отдельно от Formatted, например "1 ⚠ (+466 формат)"
     public static string DiffCell(ReportEntry e)

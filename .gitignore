@@ -19,3 +19,4 @@ contracts/*
 # локальные настройки стенда
 *.local.sh
 __pycache__/
+/routes-*.json
