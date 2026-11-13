@@ -62,9 +62,12 @@ public static class DryRunCommand
         var entries = new List<ReportEntry>();
         var items = new List<PlanItem>();
         var finished = new HashSet<int>();
+        var tally = new ReadTally(plan);
 
         foreach (var cr in RangePlanner.Read(connection, plan, finished))
         {
+            tally.Add(cr.Partition.Value, cr.Offset.Value);   // считаем до проверки: независимо от отчёта
+
             // из Kafka в MessageCheck в байтах
             var record = new KafkaRecord(
                 cr.Message.Headers?.Select(h => new Header(h.Key, h.GetValueBytes())).ToList() ?? [],
@@ -108,9 +111,11 @@ public static class DryRunCommand
 
         bool allRead = finished.Count == plan.Count;
         long gaps = expected - entries.Count;
-        bool sumMatches = byVerdict.Values.Sum() == entries.Count  // у каждой записи ровно одно решение
+        bool sumMatches = tally.Matches(entries.Count)            // прочитанное = записи отчёта, без повторов и выхода за план
+                          && byVerdict.Values.Sum() == entries.Count  // у каждой записи ровно одно решение
                           && byStatus.Values.Sum() == entries.Count  // и ровно один статус
                           && rows.Sum(r => r.Count) == entries.Count;
+        bool readOk = allRead && sumMatches;
         int rejected = entries.Count(e => e.IsRejected);
         int warnings = entries.Count(e => e.HasWarnings);
         int exitCode = ExitCodes.For(allRead, sumMatches, rejected);
@@ -124,9 +129,13 @@ public static class DryRunCommand
 
         Console.WriteLine($"\nПрочитано {entries.Count} записей, offsets в диапазоне: {expected}" + (gaps > 0 ? $" (без записей: {gaps})" : ""));
         Console.WriteLine($"Дочитаны партиции: {finished.Count} из {plan.Count}");
+        foreach (var p in plan)
+            Console.WriteLine($"  партиция {p.Partition}: прочитано {tally.ReadIn(p.Partition)} из [{p.Start}; {p.End}) = {p.End - p.Start}" +
+                              (finished.Contains(p.Partition) ? "" : "  ⚠ не дочитана"));
+        Console.WriteLine($"Сверка чтения: {tally.Describe(entries.Count)}");
         foreach (var (verdict, count) in byVerdict.OrderBy(x => x.Key, StringComparer.Ordinal)) Console.WriteLine($"  {verdict,-15} {count}");
         if (warnings > 0) Console.WriteLine($"  ⚠ записей с опасными отличиями: {warnings} (поле молча стало значением по умолчанию или изменилось)");
-        Console.WriteLine(allRead && sumMatches ? "✅ Сводка сходится" : "❌ Сводка НЕ сходится");
+        Console.WriteLine(readOk ? "✅ Сводка сходится" : "❌ Сводка НЕ сходится");
 
         // отчет
         var contractsInfo = contracts?.Describe() ?? "встроенные учебные (MessageCheck.SampleContracts)";
@@ -141,6 +150,13 @@ public static class DryRunCommand
             window = new { from = opt.From, to = opt.To, fromMs, toMs },
             partitions = plan,
             summary = new { read = entries.Count, offsetsInRange = expected, gaps, partitionsFinished = finished.Count, allRead, sumMatches, rejected, warnings, byVerdict, byReason, byStatus, rows },
+            readCheck = new
+            {
+                consumed = tally.Consumed,
+                duplicates = tally.Duplicates,
+                outOfRange = tally.OutOfRange,
+                perPartition = plan.Select(p => new { p.Partition, read = tally.ReadIn(p.Partition), inRange = p.End - p.Start, finished = finished.Contains(p.Partition) })
+            },
             plan = routes is null ? null : new { items = items.Count, partitioner = opt.Partitioner.ToString().ToLowerInvariant(), routes = routes.All },
             exitCode,
             records = entries
@@ -149,12 +165,16 @@ public static class DryRunCommand
         string mdPath = await ReportMarkdown.WriteAsync(opt.OutDir, "report.md", ReportMarkdown.Build(
             "Отчёт KafkaReplay: проверка (ничего не отправлялось)",
             [("Источник", source.Describe()), ("Топик", opt.Topic!), ("Окно", $"[{opt.From:yyyy-MM-dd HH:mm:ss zzz} ; {opt.To:yyyy-MM-dd HH:mm:ss zzz})"),
-             ("Контракты", contractsInfo), ("Цель", target?.Describe() ?? "нет (план не строился)")],
+             ("Контракты", contractsInfo), ("Цель", target?.Describe() ?? "нет (план не строился)"),
+             ("Сверка чтения", $"{(readOk ? "✅" : "❌")} {tally.Describe(entries.Count)}, дочитаны партиции {finished.Count} из {plan.Count}")],
             entries)).ConfigureAwait(false);
         Console.WriteLine($"Отчёт: {reportPath}");
         Console.WriteLine($"       {mdPath}");
 
-        if (routes is not null)
+        // план — только по полностью и правильно прочитанному окну: иначе --execute отправил бы неполные данные
+        if (routes is not null && !readOk)
+            Console.WriteLine("План отправки НЕ записан: окно прочитано не полностью или сверка чтения не сошлась — отправлять по нему нельзя");
+        else if (routes is not null)
         {
             var notInPlan = entries.Where(e => e.TargetTopic is null).GroupBy(e => e.Status, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
             var planFile = PlanFile.Create(DateTimeOffset.Now, opt.Topic!, source.Describe(), source.BootstrapServers,
