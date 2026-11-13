@@ -20,12 +20,10 @@ public enum Reason
 {
     Ok,
     MissingEventType,
-    MissingVersion,
     EmptyHeader,
     InvalidHeaderEncoding, // не UTF-8
     DuplicateHeader,       // заголовок повторяется с разными значениями
     NotOurEvent,           // чужое событие
-    UnknownVersion,
     InvalidPayload,
     ModuleTimeout,
     ModuleCrashed,

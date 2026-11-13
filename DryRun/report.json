@@ -2,35 +2,35 @@
   "mode": "dry-run (ничего не отправлялось)",
   "topic": "orders-multi",
   "window": {
-    "from": "2026-10-08T08:54:36+03:00",
-    "to": "2026-10-08T08:54:37+03:00",
-    "fromMs": 1791438876000,
-    "toMs": 1791438877000
+    "from": "2026-10-13T10:38:01+03:00",
+    "to": "2026-10-13T10:38:02+03:00",
+    "fromMs": 1791877081000,
+    "toMs": 1791877082000
   },
   "partitions": [
     {
       "topic": "orders-multi",
       "partition": 0,
       "low": 0,
-      "high": 10,
-      "start": 5,
-      "end": 10
+      "high": 45,
+      "start": 40,
+      "end": 45
     },
     {
       "topic": "orders-multi",
       "partition": 1,
       "low": 0,
-      "high": 7,
-      "start": 3,
-      "end": 7
+      "high": 31,
+      "start": 28,
+      "end": 31
     },
     {
       "topic": "orders-multi",
       "partition": 2,
       "low": 0,
-      "high": 11,
-      "start": 5,
-      "end": 11
+      "high": 57,
+      "start": 50,
+      "end": 57
     }
   ],
   "summary": {
@@ -41,30 +41,29 @@
     "allRead": true,
     "sumMatches": true,
     "byVerdict": {
-      "Allowed": 4,
+      "Allowed": 5,
       "Skipped": 3,
       "ConversionError": 2,
-      "Rejected": 6
+      "Rejected": 5
     },
     "byReason": {
-      "Ok": 4,
+      "Ok": 5,
       "NotOurEvent": 2,
       "InvalidPayload": 2,
       "MissingEventType": 1,
       "EmptyHeader": 1,
       "InvalidHeaderEncoding": 1,
       "DuplicateHeader": 2,
-      "UnknownVersion": 1,
       "Tombstone": 1
     },
     "byEventType": {
-      "OrderCreated": {
-        "Allowed": 3,
+      "MessageCheck.SampleContracts.OrderCreated": {
+        "Allowed": 4,
         "ConversionError": 2,
-        "Rejected": 3,
+        "Rejected": 2,
         "Skipped": 1
       },
-      "CourierAssigned": {
+      "Dodo.Delivery.Contracts.CourierAssigned": {
         "Skipped": 1
       },
       "—": {
@@ -73,10 +72,10 @@
       "\u003Cне UTF-8: FFFE\u003E": {
         "Rejected": 1
       },
-      "OrderCancelled": {
+      "MessageCheck.SampleContracts.OrderCancelled": {
         "Allowed": 1
       },
-      "PaymentCaptured": {
+      "Dodo.Payments.Contracts.PaymentCaptured": {
         "Skipped": 1
       }
     }
@@ -84,407 +83,422 @@
   "records": [
     {
       "partition": 0,
-      "offset": 5,
-      "timestamp": "2026-10-08T08:54:36.318+03:00",
+      "offset": 40,
+      "timestamp": "2026-10-13T10:38:01.467+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "102",
       "headers": [
         {
-          "key": "eventType",
-          "value": "OrderCreated",
-          "hex": "4F7264657243726561746564"
+          "key": "Event-Type",
+          "value": "MessageCheck.SampleContracts.OrderCreated",
+          "hex": "4D657373616765436865636B2E53616D706C65436F6E7472616374732E4F7264657243726561746564"
         },
         {
-          "key": "version",
-          "value": "1",
-          "hex": "31"
+          "key": "Event-PackageVersion",
+          "value": "1.0.0",
+          "hex": "312E302E30"
         }
       ],
-      "payload": "{\u0022orderId\u0022:102,\u0022amount\u0022:300}",
-      "sha256": "5c069b114f4dae16df6d28c7291d2a1db8cbbfab0471fc10d5dde67465d22f04",
-      "eventType": "OrderCreated",
+      "payload": "{\u0022OrderId\u0022:102,\u0022Amount\u0022:300,\u0022Comment\u0022:\u0022позвонить\u0022}",
+      "sha256": "d5bc7614eda655b40301eec205023f2195787dd832c1aa405235e31ed276bb71",
+      "eventType": "MessageCheck.SampleContracts.OrderCreated",
+      "packageVersion": "1.0.0",
       "verdict": "Allowed",
       "reason": "Ok",
-      "details": "OrderCreated v1 → OrderCreatedV1",
-      "resultJson": "{\u0022orderId\u0022:102,\u0022amount\u0022:300}"
+      "details": "MessageCheck.SampleContracts.OrderCreated (1.0.0) → OrderCreated; лишние поля: Comment",
+      "resultJson": "{\u0022OrderId\u0022:102,\u0022Amount\u0022:300,\u0022Currency\u0022:null}"
     },
     {
       "partition": 0,
-      "offset": 6,
-      "timestamp": "2026-10-08T08:54:36.326+03:00",
+      "offset": 41,
+      "timestamp": "2026-10-13T10:38:01.474+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "103",
       "headers": [
         {
-          "key": "eventType",
-          "value": "OrderCreated",
-          "hex": "4F7264657243726561746564"
+          "key": "Event-Type",
+          "value": "MessageCheck.SampleContracts.OrderCreated",
+          "hex": "4D657373616765436865636B2E53616D706C65436F6E7472616374732E4F7264657243726561746564"
         },
         {
-          "key": "version",
-          "value": "2",
-          "hex": "32"
+          "key": "Event-PackageVersion",
+          "value": "1.1.0",
+          "hex": "312E312E30"
         }
       ],
-      "payload": "{\u0022orderId\u0022:103,\u0022amount\u0022:700,\u0022currency\u0022:\u0022RUB\u0022}",
-      "sha256": "11f865a63f48b9877ef9ec5693dce6e42c7b72a03614384e7d622467a8306dd3",
-      "eventType": "OrderCreated",
+      "payload": "{\u0022OrderId\u0022:103,\u0022Amount\u0022:700,\u0022Currency\u0022:\u0022RUB\u0022}",
+      "sha256": "09342a73dcd7065ee955418d78826f6bdd6b7d23b15888f62afe5875ab6b5775",
+      "eventType": "MessageCheck.SampleContracts.OrderCreated",
+      "packageVersion": "1.1.0",
       "verdict": "Allowed",
       "reason": "Ok",
-      "details": "OrderCreated v2 → OrderCreatedV2",
-      "resultJson": "{\u0022orderId\u0022:103,\u0022amount\u0022:700,\u0022currency\u0022:\u0022RUB\u0022}"
+      "details": "MessageCheck.SampleContracts.OrderCreated (1.1.0) → OrderCreated",
+      "resultJson": "{\u0022OrderId\u0022:103,\u0022Amount\u0022:700,\u0022Currency\u0022:\u0022RUB\u0022}"
     },
     {
       "partition": 0,
-      "offset": 7,
-      "timestamp": "2026-10-08T08:54:36.349+03:00",
+      "offset": 42,
+      "timestamp": "2026-10-13T10:38:01.493+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "102",
       "headers": [
         {
-          "key": "eventType",
-          "value": "CourierAssigned",
-          "hex": "436F757269657241737369676E6564"
+          "key": "Event-Type",
+          "value": "Dodo.Delivery.Contracts.CourierAssigned",
+          "hex": "446F646F2E44656C69766572792E436F6E7472616374732E436F757269657241737369676E6564"
         }
       ],
-      "payload": "{\u0022courierId\u0022:7,\u0022orderId\u0022:102}",
-      "sha256": "3874d763b70e12711980e8e3aba5496818ea9dece5d6c67566e83e1cf407601d",
-      "eventType": "CourierAssigned",
+      "payload": "{\u0022CourierId\u0022:7,\u0022OrderId\u0022:102}",
+      "sha256": "4cf662c83b56508e392c432a7bcb36c38dd1bd10770629352837d80e0bac6664",
+      "eventType": "Dodo.Delivery.Contracts.CourierAssigned",
+      "packageVersion": null,
       "verdict": "Skipped",
       "reason": "NotOurEvent",
-      "details": "CourierAssigned — чужой тип",
+      "details": "Dodo.Delivery.Contracts.CourierAssigned — чужой тип",
       "resultJson": null
     },
     {
       "partition": 0,
-      "offset": 8,
-      "timestamp": "2026-10-08T08:54:36.357+03:00",
+      "offset": 43,
+      "timestamp": "2026-10-13T10:38:01.5+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "104",
       "headers": [
         {
-          "key": "eventType",
-          "value": "OrderCreated",
-          "hex": "4F7264657243726561746564"
+          "key": "Event-Type",
+          "value": "MessageCheck.SampleContracts.OrderCreated",
+          "hex": "4D657373616765436865636B2E53616D706C65436F6E7472616374732E4F7264657243726561746564"
         },
         {
-          "key": "version",
-          "value": "1",
-          "hex": "31"
+          "key": "Event-PackageVersion",
+          "value": "1.0.0",
+          "hex": "312E302E30"
         }
       ],
-      "payload": "{\u0022orderId\u0022:104,\u0022amount\u0022:",
-      "sha256": "816daf4d235868f13fbadc0fbdfb2f01c6bc92ef348227ccc83ca7ea4bd982a8",
-      "eventType": "OrderCreated",
+      "payload": "{\u0022OrderId\u0022:104,\u0022Amount\u0022:",
+      "sha256": "9c6bb9cbf87ff89296e2d3573c1017b5e5bae47671bdad07e97565e47924980d",
+      "eventType": "MessageCheck.SampleContracts.OrderCreated",
+      "packageVersion": "1.0.0",
       "verdict": "ConversionError",
       "reason": "InvalidPayload",
-      "details": "Expected depth to be zero at the end of the JSON payload. There is an open JSON object or array that should be closed. Path: $.amount | LineNumber: 0 | BytePositionInLine: 24.",
+      "details": "Expected depth to be zero at the end of the JSON payload. There is an open JSON object or array that should be closed. Path: $.Amount | LineNumber: 0 | BytePositionInLine: 24.",
       "resultJson": null
     },
     {
       "partition": 0,
-      "offset": 9,
-      "timestamp": "2026-10-08T08:54:36.372+03:00",
+      "offset": 44,
+      "timestamp": "2026-10-13T10:38:01.513+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "106",
       "headers": [
         {
-          "key": "version",
-          "value": "1",
-          "hex": "31"
+          "key": "Event-PackageVersion",
+          "value": "1.0.0",
+          "hex": "312E302E30"
         }
       ],
-      "payload": "{\u0022orderId\u0022:106,\u0022amount\u0022:100}",
-      "sha256": "3bfdd412b4878c82d7c1c03ea873e38eaca3959b4fc6c806a096ab1f0e90b137",
+      "payload": "{\u0022OrderId\u0022:106,\u0022Amount\u0022:100}",
+      "sha256": "6846bdaa51a183b71b07c6119f7aade0385f80c55b032a72fc9a41b080be8322",
       "eventType": null,
+      "packageVersion": "1.0.0",
       "verdict": "Rejected",
       "reason": "MissingEventType",
-      "details": "нет заголовка eventType",
+      "details": "нет заголовка Event-Type",
       "resultJson": null
     },
     {
       "partition": 1,
-      "offset": 3,
-      "timestamp": "2026-10-08T08:54:36.379+03:00",
+      "offset": 28,
+      "timestamp": "2026-10-13T10:38:01.521+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "107",
       "headers": [
         {
-          "key": "eventType",
+          "key": "Event-Type",
           "value": "",
           "hex": ""
         },
         {
-          "key": "version",
-          "value": "1",
-          "hex": "31"
+          "key": "Event-PackageVersion",
+          "value": "1.0.0",
+          "hex": "312E302E30"
         }
       ],
-      "payload": "{\u0022orderId\u0022:107,\u0022amount\u0022:100}",
-      "sha256": "1f94634668d5ad50eac74a0d90f3f8e823ed622841b681af951adba0e50b62f2",
+      "payload": "{\u0022OrderId\u0022:107,\u0022Amount\u0022:100}",
+      "sha256": "d2bfa1e304d067ce54a82a1191357c291e902ac30d9f74cfd4193382bf51e014",
       "eventType": null,
+      "packageVersion": "1.0.0",
       "verdict": "Rejected",
       "reason": "EmptyHeader",
-      "details": "заголовок eventType пустой",
+      "details": "заголовок Event-Type пустой",
       "resultJson": null
     },
     {
       "partition": 1,
-      "offset": 4,
-      "timestamp": "2026-10-08T08:54:36.387+03:00",
+      "offset": 29,
+      "timestamp": "2026-10-13T10:38:01.527+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "108",
       "headers": [
         {
-          "key": "eventType",
+          "key": "Event-Type",
           "value": "\u003Cне UTF-8: FFFE\u003E",
           "hex": "FFFE"
         },
         {
-          "key": "version",
-          "value": "1",
-          "hex": "31"
+          "key": "Event-PackageVersion",
+          "value": "1.0.0",
+          "hex": "312E302E30"
         }
       ],
-      "payload": "{\u0022orderId\u0022:108,\u0022amount\u0022:100}",
-      "sha256": "e789c08a577cd267536deb398cfaa379f56aaefece1efea637d995630dca4c3f",
+      "payload": "{\u0022OrderId\u0022:108,\u0022Amount\u0022:100}",
+      "sha256": "794391dafe748bba641923102d83cd3a7fae06634bac71ba944eb818971615f9",
       "eventType": "\u003Cне UTF-8: FFFE\u003E",
+      "packageVersion": "1.0.0",
       "verdict": "Rejected",
       "reason": "InvalidHeaderEncoding",
-      "details": "заголовок eventType не UTF-8: FFFE",
+      "details": "заголовок Event-Type не UTF-8: FFFE",
       "resultJson": null
     },
     {
       "partition": 1,
-      "offset": 5,
-      "timestamp": "2026-10-08T08:54:36.394+03:00",
+      "offset": 30,
+      "timestamp": "2026-10-13T10:38:01.534+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "109",
       "headers": [
         {
-          "key": "eventType",
-          "value": "OrderCreated",
-          "hex": "4F7264657243726561746564"
+          "key": "Event-Type",
+          "value": "MessageCheck.SampleContracts.OrderCreated",
+          "hex": "4D657373616765436865636B2E53616D706C65436F6E7472616374732E4F7264657243726561746564"
         },
         {
-          "key": "version",
-          "value": "1",
-          "hex": "31"
+          "key": "Event-PackageVersion",
+          "value": "1.0.0",
+          "hex": "312E302E30"
         },
         {
-          "key": "eventType",
-          "value": "OrderCancelled",
-          "hex": "4F7264657243616E63656C6C6564"
+          "key": "Event-Type",
+          "value": "MessageCheck.SampleContracts.OrderCancelled",
+          "hex": "4D657373616765436865636B2E53616D706C65436F6E7472616374732E4F7264657243616E63656C6C6564"
         }
       ],
-      "payload": "{\u0022orderId\u0022:109,\u0022amount\u0022:100}",
-      "sha256": "8ca3d1e79eb6b8dde7e84f0ef8112d0ddeb528ec545868af853a0be5f9c35278",
-      "eventType": "OrderCreated",
+      "payload": "{\u0022OrderId\u0022:109,\u0022Amount\u0022:100}",
+      "sha256": "18fc0f269ef7df4adda9ad071da26c7400a63ba08096c1dcac689804978e1229",
+      "eventType": "MessageCheck.SampleContracts.OrderCreated",
+      "packageVersion": "1.0.0",
       "verdict": "Rejected",
       "reason": "DuplicateHeader",
-      "details": "заголовок eventType встречается 2 раза",
-      "resultJson": null
-    },
-    {
-      "partition": 1,
-      "offset": 6,
-      "timestamp": "2026-10-08T08:54:36.416+03:00",
-      "timestampType": "CreateTime",
-      "outsideWindow": false,
-      "key": "112",
-      "headers": [
-        {
-          "key": "eventType",
-          "value": "OrderCreated",
-          "hex": "4F7264657243726561746564"
-        },
-        {
-          "key": "version",
-          "value": "1",
-          "hex": "31"
-        }
-      ],
-      "payload": "",
-      "sha256": "025a036d58eba14f86fce8e85917c7947ec5af302b516777f2a6d4ebe3ed30fe",
-      "eventType": "OrderCreated",
-      "verdict": "ConversionError",
-      "reason": "InvalidPayload",
-      "details": "The input does not contain any JSON tokens. Expected the input to start with a valid JSON token, when isFinalBlock is true. Path: $ | LineNumber: 0 | BytePositionInLine: 0.",
+      "details": "заголовок Event-Type встречается 2 раза",
       "resultJson": null
     },
     {
       "partition": 2,
-      "offset": 5,
-      "timestamp": "2026-10-08T08:54:36.276+03:00",
+      "offset": 50,
+      "timestamp": "2026-10-13T10:38:01.425+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "101",
       "headers": [
         {
-          "key": "eventType",
-          "value": "OrderCreated",
-          "hex": "4F7264657243726561746564"
+          "key": "Event-Type",
+          "value": "MessageCheck.SampleContracts.OrderCreated",
+          "hex": "4D657373616765436865636B2E53616D706C65436F6E7472616374732E4F7264657243726561746564"
         },
         {
-          "key": "version",
-          "value": "1",
-          "hex": "31"
+          "key": "Event-PackageVersion",
+          "value": "1.0.0",
+          "hex": "312E302E30"
         }
       ],
-      "payload": "{\u0022orderId\u0022:101,\u0022amount\u0022:500}",
-      "sha256": "a874b6ff2b0f7c3d06c1b9c537745fe4785db451480aaca540c7c32a7e6e12c2",
-      "eventType": "OrderCreated",
+      "payload": "{\u0022OrderId\u0022:101,\u0022Amount\u0022:500}",
+      "sha256": "11ef85ebbb87d6b653c10ac1d42bd30279a395618a1d235f1c6270add5b674bf",
+      "eventType": "MessageCheck.SampleContracts.OrderCreated",
+      "packageVersion": "1.0.0",
       "verdict": "Allowed",
       "reason": "Ok",
-      "details": "OrderCreated v1 → OrderCreatedV1",
-      "resultJson": "{\u0022orderId\u0022:101,\u0022amount\u0022:500}"
+      "details": "MessageCheck.SampleContracts.OrderCreated (1.0.0) → OrderCreated",
+      "resultJson": "{\u0022OrderId\u0022:101,\u0022Amount\u0022:500,\u0022Currency\u0022:null}"
     },
     {
       "partition": 2,
-      "offset": 6,
-      "timestamp": "2026-10-08T08:54:36.334+03:00",
+      "offset": 51,
+      "timestamp": "2026-10-13T10:38:01.481+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "101",
       "headers": [
         {
-          "key": "eventType",
-          "value": "OrderCancelled",
-          "hex": "4F7264657243616E63656C6C6564"
+          "key": "Event-Type",
+          "value": "MessageCheck.SampleContracts.OrderCancelled",
+          "hex": "4D657373616765436865636B2E53616D706C65436F6E7472616374732E4F7264657243616E63656C6C6564"
         },
         {
-          "key": "version",
-          "value": "1",
-          "hex": "31"
+          "key": "Event-PackageVersion",
+          "value": "1.0.0",
+          "hex": "312E302E30"
         }
       ],
-      "payload": "{\u0022orderId\u0022:101,\u0022reason\u0022:\u0022client\u0022}",
-      "sha256": "48757004ffa7565f462dc488566bd5581f7b60c059154f2ed59a1235536519b3",
-      "eventType": "OrderCancelled",
+      "payload": "{\u0022OrderId\u0022:101,\u0022Reason\u0022:\u0022client\u0022}",
+      "sha256": "0645f87c13ca7966c0dde0acb0445e0d3207b47197faec522b67465d70ca4f1a",
+      "eventType": "MessageCheck.SampleContracts.OrderCancelled",
+      "packageVersion": "1.0.0",
       "verdict": "Allowed",
       "reason": "Ok",
-      "details": "OrderCancelled v1 → OrderCancelledV1",
-      "resultJson": "{\u0022orderId\u0022:101,\u0022reason\u0022:\u0022client\u0022}"
+      "details": "MessageCheck.SampleContracts.OrderCancelled (1.0.0) → OrderCancelled",
+      "resultJson": "{\u0022OrderId\u0022:101,\u0022Reason\u0022:\u0022client\u0022}"
     },
     {
       "partition": 2,
-      "offset": 7,
-      "timestamp": "2026-10-08T08:54:36.342+03:00",
+      "offset": 52,
+      "timestamp": "2026-10-13T10:38:01.487+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "101",
       "headers": [
         {
-          "key": "eventType",
-          "value": "PaymentCaptured",
-          "hex": "5061796D656E744361707475726564"
+          "key": "Event-Type",
+          "value": "Dodo.Payments.Contracts.PaymentCaptured",
+          "hex": "446F646F2E5061796D656E74732E436F6E7472616374732E5061796D656E744361707475726564"
         },
         {
-          "key": "version",
-          "value": "1",
-          "hex": "31"
+          "key": "Event-PackageVersion",
+          "value": "3.2.0",
+          "hex": "332E322E30"
         }
       ],
-      "payload": "{\u0022paymentId\u0022:9001,\u0022orderId\u0022:101}",
-      "sha256": "d7dc21da1ea1baabc5e94d7277494f47ae3a1b48a9a0c3ad345ce75f70390e9f",
-      "eventType": "PaymentCaptured",
+      "payload": "{\u0022PaymentId\u0022:9001,\u0022OrderId\u0022:101}",
+      "sha256": "b71744a56ef59a60d23c209b087a625925a74361f3b7e1cc427134f5ad5e1205",
+      "eventType": "Dodo.Payments.Contracts.PaymentCaptured",
+      "packageVersion": "3.2.0",
       "verdict": "Skipped",
       "reason": "NotOurEvent",
-      "details": "PaymentCaptured — чужой тип",
+      "details": "Dodo.Payments.Contracts.PaymentCaptured — чужой тип",
       "resultJson": null
     },
     {
       "partition": 2,
-      "offset": 8,
-      "timestamp": "2026-10-08T08:54:36.364+03:00",
+      "offset": 53,
+      "timestamp": "2026-10-13T10:38:01.507+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "105",
       "headers": [
         {
-          "key": "eventType",
-          "value": "OrderCreated",
-          "hex": "4F7264657243726561746564"
+          "key": "Event-Type",
+          "value": "MessageCheck.SampleContracts.OrderCreated",
+          "hex": "4D657373616765436865636B2E53616D706C65436F6E7472616374732E4F7264657243726561746564"
         },
         {
-          "key": "version",
-          "value": "3",
-          "hex": "33"
+          "key": "Event-PackageVersion",
+          "value": "2.0.0",
+          "hex": "322E302E30"
         }
       ],
-      "payload": "{\u0022orderId\u0022:105,\u0022amount\u0022:100}",
-      "sha256": "30ca71611f6a263ec09dfbc792ee98ff5c40882bcf7747bd4a70d44dfb5aa8eb",
-      "eventType": "OrderCreated",
-      "verdict": "Rejected",
-      "reason": "UnknownVersion",
-      "details": "OrderCreated v3 нет в каталоге",
-      "resultJson": null
+      "payload": "{\u0022OrderId\u0022:105,\u0022Amount\u0022:100}",
+      "sha256": "5d4a6e50ae40cc6d6b94cc707f36e94b085a7b96877c95ec36d71bdefa8d9ba5",
+      "eventType": "MessageCheck.SampleContracts.OrderCreated",
+      "packageVersion": "2.0.0",
+      "verdict": "Allowed",
+      "reason": "Ok",
+      "details": "MessageCheck.SampleContracts.OrderCreated (2.0.0) → OrderCreated",
+      "resultJson": "{\u0022OrderId\u0022:105,\u0022Amount\u0022:100,\u0022Currency\u0022:null}"
     },
     {
       "partition": 2,
-      "offset": 9,
-      "timestamp": "2026-10-08T08:54:36.401+03:00",
+      "offset": 54,
+      "timestamp": "2026-10-13T10:38:01.54+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "110",
       "headers": [
         {
-          "key": "eventType",
-          "value": "OrderCreated",
-          "hex": "4F7264657243726561746564"
+          "key": "Event-Type",
+          "value": "MessageCheck.SampleContracts.OrderCreated",
+          "hex": "4D657373616765436865636B2E53616D706C65436F6E7472616374732E4F7264657243726561746564"
         },
         {
-          "key": "version",
-          "value": "1",
-          "hex": "31"
+          "key": "Event-PackageVersion",
+          "value": "1.0.0",
+          "hex": "312E302E30"
         },
         {
-          "key": "eventType",
-          "value": "OrderCreated",
-          "hex": "4F7264657243726561746564"
+          "key": "Event-Type",
+          "value": "MessageCheck.SampleContracts.OrderCreated",
+          "hex": "4D657373616765436865636B2E53616D706C65436F6E7472616374732E4F7264657243726561746564"
         }
       ],
-      "payload": "{\u0022orderId\u0022:110,\u0022amount\u0022:100}",
-      "sha256": "6684162027e27c453e6fad6d449d4aa1348bb57899628ed2d3900903e0d3c3fd",
-      "eventType": "OrderCreated",
+      "payload": "{\u0022OrderId\u0022:110,\u0022Amount\u0022:100}",
+      "sha256": "cc03ed7cf6a9f0b0c6a64f5202833a53cc3b8b05b9790460ddd7cb9a05452cd1",
+      "eventType": "MessageCheck.SampleContracts.OrderCreated",
+      "packageVersion": "1.0.0",
       "verdict": "Rejected",
       "reason": "DuplicateHeader",
-      "details": "заголовок eventType встречается 2 раза",
+      "details": "заголовок Event-Type встречается 2 раза",
       "resultJson": null
     },
     {
       "partition": 2,
-      "offset": 10,
-      "timestamp": "2026-10-08T08:54:36.409+03:00",
+      "offset": 55,
+      "timestamp": "2026-10-13T10:38:01.546+03:00",
       "timestampType": "CreateTime",
       "outsideWindow": false,
       "key": "111",
       "headers": [
         {
-          "key": "eventType",
-          "value": "OrderCreated",
-          "hex": "4F7264657243726561746564"
+          "key": "Event-Type",
+          "value": "MessageCheck.SampleContracts.OrderCreated",
+          "hex": "4D657373616765436865636B2E53616D706C65436F6E7472616374732E4F7264657243726561746564"
         },
         {
-          "key": "version",
-          "value": "1",
-          "hex": "31"
+          "key": "Event-PackageVersion",
+          "value": "1.0.0",
+          "hex": "312E302E30"
         }
       ],
       "payload": null,
-      "sha256": "a2178973bd16b223d362eb796205f94021afde84a4e2666ee3498a52d75db1d7",
-      "eventType": "OrderCreated",
+      "sha256": "98db480164b339e524151dbabecfc2e21c325e910ec263c6604cb03d1135e685",
+      "eventType": "MessageCheck.SampleContracts.OrderCreated",
+      "packageVersion": "1.0.0",
       "verdict": "Skipped",
       "reason": "Tombstone",
       "details": "value = null: tombstone, не событие",
+      "resultJson": null
+    },
+    {
+      "partition": 2,
+      "offset": 56,
+      "timestamp": "2026-10-13T10:38:01.552+03:00",
+      "timestampType": "CreateTime",
+      "outsideWindow": false,
+      "key": "111",
+      "headers": [
+        {
+          "key": "Event-Type",
+          "value": "MessageCheck.SampleContracts.OrderCreated",
+          "hex": "4D657373616765436865636B2E53616D706C65436F6E7472616374732E4F7264657243726561746564"
+        },
+        {
+          "key": "Event-PackageVersion",
+          "value": "1.0.0",
+          "hex": "312E302E30"
+        }
+      ],
+      "payload": "",
+      "sha256": "f17b5ae007fdd10a790373bc9d1327f3e0d717c708b4ad9cee5230372c0e6e57",
+      "eventType": "MessageCheck.SampleContracts.OrderCreated",
+      "packageVersion": "1.0.0",
+      "verdict": "ConversionError",
+      "reason": "InvalidPayload",
+      "details": "The input does not contain any JSON tokens. Expected the input to start with a valid JSON token, when isFinalBlock is true. Path: $ | LineNumber: 0 | BytePositionInLine: 0.",
       "resultJson": null
     }
   ]

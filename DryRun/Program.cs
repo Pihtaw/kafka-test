@@ -106,7 +106,7 @@ record PartitionPlan(string Topic, int Partition, long Low, long High, long Star
 record ReportEntry(
     int Partition, long Offset, DateTimeOffset Timestamp, string TimestampType, bool OutsideWindow,
     string? Key, List<ReportHeader> Headers, string? Payload, string Sha256,
-    string? EventType, string Verdict, string Reason, string? Details, string? ResultJson)
+    string? EventType, string? PackageVersion, string Verdict, string Reason, string? Details, string? ResultJson)
 {
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
 
@@ -118,7 +118,8 @@ record ReportEntry(
         r.Headers.Select(h => new ReportHeader(h.Key, h.Value is null ? null : Text(h.Value), h.Value is null ? null : Convert.ToHexString(h.Value))).ToList(),
         r.Payload is null ? null : Text(r.Payload),
         Checksum(r),
-        r.Headers.Where(h => h.Key == "eventType" && h.Value is { Length: > 0 }).Select(h => Text(h.Value!)).FirstOrDefault(),
+        r.Headers.Where(h => h.Key == HeaderNames.EventType && h.Value is { Length: > 0 }).Select(h => Text(h.Value!)).FirstOrDefault(),
+        r.Headers.Where(h => h.Key == HeaderNames.PackageVersion && h.Value is { Length: > 0 }).Select(h => Text(h.Value!)).FirstOrDefault(),   // ← эта строка новая
         d.Verdict.ToString(), d.Reason.ToString(), d.Details, d.ResultJson);
 
     // текст если это UTF-8

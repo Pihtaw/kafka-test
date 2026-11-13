@@ -27,27 +27,32 @@ static Headers H(params (string Key, byte[]? Value)[] items)
     return h;
 }
 static byte[] T(string s) => Encoding.UTF8.GetBytes(s);
-static Headers Ev(string type, string version) => H(("eventType", T(type)), ("version", T(version)));
+const string EventType = "Event-Type";
+const string PackageVersion = "Event-PackageVersion";
+static Headers Ev(string type, string version) => H((EventType, T(type)), (PackageVersion, T(version)));
+
+const string OrderCreated = "MessageCheck.SampleContracts.OrderCreated";
+const string OrderCancelled = "MessageCheck.SampleContracts.OrderCancelled";
 
 var messages = new (string Key, Headers Headers, string? Payload, string Comment)[]
 {
-    ("101", Ev("OrderCreated", "1"),   """{"orderId":101,"amount":500}""",                    "наше, валидное"),
-    ("102", Ev("OrderCreated", "1"),   """{"orderId":102,"amount":300}""",                    "наше, валидное"),
-    ("103", Ev("OrderCreated", "2"),   """{"orderId":103,"amount":700,"currency":"RUB"}""",   "наше, валидное v2"),
-    ("101", Ev("OrderCancelled", "1"), """{"orderId":101,"reason":"client"}""",              "наше, валидное"),
-    ("101", Ev("PaymentCaptured", "1"), """{"paymentId":9001,"orderId":101}""",              "чужое"),
-    ("102", H(("eventType", T("CourierAssigned"))), """{"courierId":7,"orderId":102}""",     "чужое, без version"),
-    ("104", Ev("OrderCreated", "1"),   """{"orderId":104,"amount":""",                       "битое: JSON оборван"),
-    ("105", Ev("OrderCreated", "3"),   """{"orderId":105,"amount":100}""",                    "битое: неизвестная версия"),
-    ("106", H(("version", T("1"))),    """{"orderId":106,"amount":100}""",                    "битое: нет eventType"),
-    ("107", Ev("", "1"),               """{"orderId":107,"amount":100}""",                    "битое: пустой eventType"),
-    ("108", H(("eventType", [0xFF, 0xFE]), ("version", T("1"))), """{"orderId":108,"amount":100}""", "битое: eventType не UTF-8"),
-    ("109", H(("eventType", T("OrderCreated")), ("version", T("1")), ("eventType", T("OrderCancelled"))),
-                                       """{"orderId":109,"amount":100}""",                    "битое: eventType дважды, разные"),
-    ("110", H(("eventType", T("OrderCreated")), ("version", T("1")), ("eventType", T("OrderCreated"))),
-                                       """{"orderId":110,"amount":100}""",                    "битое: eventType дважды, одинаковые"),
-    ("111", Ev("OrderCreated", "1"),   null,                                                  "tombstone (value = null)"),
-    ("112", Ev("OrderCreated", "1"),   "",                                                    "битое: пустое тело"),
+    ("101", Ev(OrderCreated, "1.0.0"),   """{"OrderId":101,"Amount":500}""",                    "наше, пакет 1.0.0"),
+    ("102", Ev(OrderCreated, "1.0.0"),   """{"OrderId":102,"Amount":300,"Comment":"позвонить"}""", "наше, пакет 1.0.0, лишнее поле Comment пропускается"),
+    ("103", Ev(OrderCreated, "1.1.0"),   """{"OrderId":103,"Amount":700,"Currency":"RUB"}""",   "наше, пакет 1.1.0 (добавилось Currency)"),
+    ("101", Ev(OrderCancelled, "1.0.0"), """{"OrderId":101,"Reason":"client"}""",              "наше"),
+    ("101", Ev("Dodo.Payments.Contracts.PaymentCaptured", "3.2.0"), """{"PaymentId":9001,"OrderId":101}""", "чужое"),
+    ("102", H((EventType, T("Dodo.Delivery.Contracts.CourierAssigned"))), """{"CourierId":7,"OrderId":102}""", "чужое, без версии"),
+    ("104", Ev(OrderCreated, "1.0.0"),   """{"OrderId":104,"Amount":""",                       "битое: JSON оборван"),
+    ("105", Ev(OrderCreated, "2.0.0"),   """{"OrderId":105,"Amount":100}""",                    "наше, незнакомая версия пакета — тип тот же, читается"),
+    ("106", H((PackageVersion, T("1.0.0"))), """{"OrderId":106,"Amount":100}""",                "битое: нет Event-Type"),
+    ("107", Ev("", "1.0.0"),             """{"OrderId":107,"Amount":100}""",                    "битое: пустой Event-Type"),
+    ("108", H((EventType, [0xFF, 0xFE]), (PackageVersion, T("1.0.0"))), """{"OrderId":108,"Amount":100}""", "битое: Event-Type не UTF-8"),
+    ("109", H((EventType, T(OrderCreated)), (PackageVersion, T("1.0.0")), (EventType, T(OrderCancelled))),
+                                         """{"OrderId":109,"Amount":100}""",                    "битое: Event-Type дважды, разные"),
+    ("110", H((EventType, T(OrderCreated)), (PackageVersion, T("1.0.0")), (EventType, T(OrderCreated))),
+                                         """{"OrderId":110,"Amount":100}""",                    "битое: Event-Type дважды, одинаковые"),
+    ("111", Ev(OrderCreated, "1.0.0"),   null,                                                  "tombstone (value = null)"),
+    ("111", Ev(OrderCreated, "1.0.0"),   "",                                                    "битое: пустое тело (тот же ключ, что у tombstone)"),
 };
 
 using var producer = new ProducerBuilder<string, string>(new ProducerConfig { BootstrapServers = bootstrap, Acks = Acks.All }).Build();
