@@ -8,11 +8,15 @@ public class EventCatalog
     // без учёта регистра
     private readonly Dictionary<string, Type> _types = new(StringComparer.OrdinalIgnoreCase);
 
-    public EventCatalog Add<TDto>()
+    public EventCatalog Add<TDto>() => Add(typeof(TDto));
+
+    public EventCatalog Add(Type dtoType)
     {
-        _types[typeof(TDto).FullName!] = typeof(TDto);
+        _types[dtoType.FullName!] = dtoType;
         return this;
     }
+
+    public int Count => _types.Count;
 
     // чужое событие
     public bool TryGet(string eventType, out Type dtoType) => _types.TryGetValue(eventType, out dtoType!);

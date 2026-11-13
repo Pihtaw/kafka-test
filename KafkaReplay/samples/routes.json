@@ -1,0 +1,4 @@
+{
+  "MessageCheck.SampleContracts.OrderCreated": "orders-copy",
+  "MessageCheck.SampleContracts.OrderCancelled": "orders-copy"
+}

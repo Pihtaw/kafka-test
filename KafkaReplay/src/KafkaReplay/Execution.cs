@@ -1,0 +1,157 @@
+using System.Text.Json;
+using Confluent.Kafka;
+
+namespace KafkaReplay;
+
+// результат отправки одной строки плана
+public record SendOutcome(int Index, DeliveryStatus Status, int? Partition, long? Offset, string? Error);
+
+public interface IPlanSender
+{
+    // отправить строки в порядке плана и вернуть статус каждой
+    Task<IReadOnlyList<SendOutcome>> SendAsync(IReadOnlyList<PlanItem> items);
+}
+
+public record ItemState(int Index, string ItemSha256, DeliveryStatus Status, int? Partition, long? Offset, string? Error, DateTimeOffset At);
+
+public record VerifyResult(int Index, bool Matches, List<string> Differences);
+
+public record ExecutionFile(string PlanSha256, List<ItemState> Items, List<VerifyResult> Verification)
+{
+    public static string PathFor(string planPath) => Path.Combine(Path.GetDirectoryName(Path.GetFullPath(planPath))!, "execution.json");
+
+    public static ExecutionFile? Load(string path) =>
+        File.Exists(path) ? JsonSerializer.Deserialize<ExecutionFile>(File.ReadAllText(path), PlanStore.Options) : null;
+
+    public void Save(string path) => File.WriteAllText(path, JsonSerializer.Serialize(this, PlanStore.Options));
+}
+
+public static class Executor
+{
+    public static List<PlanItem> ToSend(PlanFile plan, ExecutionFile? state)
+    {
+        var known = state?.Items.ToDictionary(s => s.Index) ?? [];
+        return plan.Items.Where(i => !known.TryGetValue(i.Index, out var s) || s.Status == DeliveryStatus.NotWritten).ToList();
+    }
+
+    public static async Task<ExecutionFile> RunAsync(PlanFile plan, ExecutionFile? previous, IPlanSender sender, Action<ExecutionFile> save, DateTimeOffset now)
+    {
+        if (previous is not null && !string.Equals(previous.PlanSha256, plan.PlanSha256, StringComparison.Ordinal))
+            throw new InvalidOperationException("execution.json относится к другому плану");
+
+        var states = (previous?.Items ?? []).ToDictionary(s => s.Index);
+        var batch = ToSend(plan, previous);
+
+        foreach (var item in batch)
+            states[item.Index] = new ItemState(item.Index, item.ItemSha256, DeliveryStatus.Unknown, null, null, "отправка начата, результата нет", now);
+        save(Snapshot());
+
+        var outcomes = batch.Count == 0 ? [] : await sender.SendAsync(batch).ConfigureAwait(false);
+        foreach (var o in outcomes)
+            states[o.Index] = new ItemState(o.Index, plan.Items[o.Index].ItemSha256, o.Status, o.Partition, o.Offset, o.Error, now);
+
+        var result = Snapshot();
+        save(result);
+        return result;
+
+        ExecutionFile Snapshot() => new(plan.PlanSha256, states.Values.OrderBy(s => s.Index).ToList(), previous?.Verification ?? []);
+    }
+}
+
+// отправка в Kafka: порядок внутри партиции сохраняется, повторы внутри
+public sealed class KafkaPlanSender(ClientConfig target) : IPlanSender
+{
+    // Пачками: следующая пачка ставится в очередь, только когда по предыдущей пришли ответы.
+    // Иначе на медленном канале (port-forward) тысячи сообщений ждут в очереди дольше таймаута и «теряются»,
+    // хотя часть из них брокер уже записал
+    public const int BatchSize = 200;
+
+    public async Task<IReadOnlyList<SendOutcome>> SendAsync(IReadOnlyList<PlanItem> items)
+    {
+        // копия: ProducerConfig(ClientConfig) меняет переданный объект на месте, и его настройки утекли бы в консьюмер сверки
+        var config = new ProducerConfig(target.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal))
+        {
+            Acks = Acks.All,
+            EnableIdempotence = true,
+            MessageTimeoutMs = 120_000,
+            RequestTimeoutMs = 30_000
+        };
+        using var producer = new ProducerBuilder<byte[]?, byte[]?>(config).Build();
+
+        var outcomes = new List<SendOutcome>(items.Count);
+        foreach (var batch in items.Chunk(BatchSize))
+        {
+            outcomes.AddRange(await SendBatchAsync(producer, batch).ConfigureAwait(false));
+            Console.WriteLine($"  отправлено {outcomes.Count} из {items.Count}");
+        }
+        producer.Flush(TimeSpan.FromSeconds(10));
+        return outcomes;
+    }
+
+    private static async Task<List<SendOutcome>> SendBatchAsync(IProducer<byte[]?, byte[]?> producer, PlanItem[] batch)
+    {
+        var pending = new List<(PlanItem Item, Task<DeliveryResult<byte[]?, byte[]?>>? Task, SendOutcome? Failed)>();
+        foreach (var item in batch)
+        {
+            try
+            {
+                var r = item.ToRecord();
+                var message = new Message<byte[]?, byte[]?>
+                {
+                    Key = r.Key,
+                    Value = r.Payload,
+                    Timestamp = new Timestamp(item.TimestampMs, TimestampType.CreateTime), // исходное время события
+                    Headers = ToKafkaHeaders(r.Headers)
+                };
+                pending.Add((item, producer.ProduceAsync(new TopicPartition(item.TargetTopic, item.TargetPartition), message), null));
+            }
+            catch (Exception e) when (e is ProduceException<byte[]?, byte[]?> or KafkaException)
+            {
+                // не встало даже в очередь отправки — точно не записано
+                pending.Add((item, null, new SendOutcome(item.Index, DeliveryStatus.NotWritten, null, null, e.Message)));
+            }
+        }
+
+        var outcomes = new List<SendOutcome>(batch.Length);
+        foreach (var (item, task, failed) in pending)
+        {
+            if (failed is not null) { outcomes.Add(failed); continue; }
+            try
+            {
+                var dr = await task!.ConfigureAwait(false);
+                outcomes.Add(new SendOutcome(item.Index, Map(dr.Status), dr.Partition.Value, dr.Offset.Value, null));
+            }
+            catch (ProduceException<byte[]?, byte[]?> e)
+            {
+                outcomes.Add(new SendOutcome(item.Index, StatusOnError(e.Error.IsLocalError, e.DeliveryResult.Status), null, null, e.Error.Reason));
+            }
+            catch (Exception e)
+            {
+                // непонятно, дошло ли
+                outcomes.Add(new SendOutcome(item.Index, DeliveryStatus.Unknown, null, null, e.Message));
+            }
+        }
+        return outcomes;
+    }
+
+    public static DeliveryStatus Map(PersistenceStatus s) => s switch
+    {
+        PersistenceStatus.Persisted => DeliveryStatus.Written,
+        PersistenceStatus.NotPersisted => DeliveryStatus.NotWritten,
+        _ => DeliveryStatus.Unknown
+    };
+
+    // Ошибка после того, как сообщение встало в очередь. «Точно не записано» — только если ответил брокер
+    // и сказал «не записал» (например, слишком большое сообщение). Ошибка на нашей стороне (таймаут, обрыв связи) —
+    // «результат неизвестен»: сообщение могло уже уйти, и брокер мог его записать.
+    // Проверено на dev: 93 сообщения с «Local: Message timed out» и статусом NotPersisted оказались в топике
+    public static DeliveryStatus StatusOnError(bool isLocalError, PersistenceStatus status) =>
+        !isLocalError && status == PersistenceStatus.NotPersisted ? DeliveryStatus.NotWritten : DeliveryStatus.Unknown;
+
+    private static Headers ToKafkaHeaders(IReadOnlyList<MessageCheck.Header> headers)
+    {
+        var result = new Headers();
+        foreach (var h in headers) result.Add(h.Key, h.Value); // в исходном порядке, повторы тоже
+        return result;
+    }
+}
