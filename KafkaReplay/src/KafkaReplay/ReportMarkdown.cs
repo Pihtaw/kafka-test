@@ -145,6 +145,7 @@ public static class ReportMarkdown
             .GroupBy(x => (x.Type, x.Field, x.Kind, x.Warning))
             .Select(g => (g.Key.Type, g.Key.Field, g.Key.Kind, g.Key.Warning, Records: g.Count(), Total: g.Sum(x => x.Count)))
             .OrderByDescending(r => r.Warning)
+            .ThenBy(r => string.Equals(r.Kind, nameof(DifferenceKind.Formatted), StringComparison.Ordinal))   // Formatted — в конец, настоящие отличия сверху
             .ThenBy(r => r.Type, StringComparer.Ordinal)
             .ThenBy(r => r.Kind, StringComparer.Ordinal)
             .ThenBy(r => r.Field, StringComparer.Ordinal)
