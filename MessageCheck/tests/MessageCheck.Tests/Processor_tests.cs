@@ -66,6 +66,16 @@ public class ProcessorTests
     }
 
     [Fact]
+    public async Task Timeout_also_covers_synchronous_module()
+    {
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var decision = await MakeProcessor(new SyncSlowModule()).ProcessAsync(ValidRecord);
+
+        Assert.Equal(Reason.ModuleTimeout, decision.Reason);
+        Assert.True(watch.Elapsed < TimeSpan.FromSeconds(2), $"ждали {watch.Elapsed}: таймаут не сработал");
+    }
+
+    [Fact]
     public async Task Crash_blocks_sending()
     {
         var decision = await MakeProcessor(new CrashingModule()).ProcessAsync(ValidRecord);
