@@ -54,11 +54,23 @@ public static class ExecuteCommand
         var toVerify = state.Items.Where(s => s.Status == DeliveryStatus.Written && s.Offset is not null && !(verified.TryGetValue(s.Index, out var v) && v.Matches)).ToList();
         if (toVerify.Count > 0)
         {
+            Console.WriteLine($"Побайтовая сверка: читаю обратно {toVerify.Count} записанных записей…");
             using var fetcher = new KafkaRecordFetcher(connection);
-            foreach (var s in toVerify)
+            // по партициям: читаем подряд от первого до последнего записанного offset и сверяем по адресу
+            foreach (var group in toVerify.GroupBy(s => (Topic: plan.Items[s.Index].TargetTopic, Partition: s.Partition!.Value)))
             {
-                var item = plan.Items[s.Index];
-                verified[s.Index] = ByteCompare.Compare(item, fetcher.Fetch(item.TargetTopic, s.Partition!.Value, s.Offset!.Value));
+                var byOffset = group.ToDictionary(s => s.Offset!.Value);
+                var range = fetcher.ReadRange(group.Key.Topic, group.Key.Partition, byOffset.Keys.Min(), byOffset.Keys.Max());
+                foreach (var (offset, record) in range.Where(r => byOffset.ContainsKey(r.Offset)))
+                {
+                    var sent = byOffset[offset];
+                    byOffset.Remove(offset);
+                    verified[sent.Index] = ByteCompare.Compare(plan.Items[sent.Index], record);
+                }
+                // что не встретилось при чтении подряд — по одной, как раньше
+                foreach (var missing in byOffset.Values)
+                    verified[missing.Index] = ByteCompare.Compare(plan.Items[missing.Index], fetcher.Fetch(group.Key.Topic, group.Key.Partition, missing.Offset!.Value));
+                Console.WriteLine($"  {group.Key.Topic}/p{group.Key.Partition}: сверено {group.Count()}");
             }
             state = state with { Verification = verified.Values.OrderBy(v => v.Index).ToList() };
             state.Save(statePath);

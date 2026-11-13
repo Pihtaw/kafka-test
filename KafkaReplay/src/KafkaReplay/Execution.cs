@@ -61,19 +61,37 @@ public static class Executor
 // отправка в Kafka: порядок внутри партиции сохраняется, повторы внутри
 public sealed class KafkaPlanSender(ClientConfig target) : IPlanSender
 {
+    // Пачками: следующая пачка ставится в очередь, только когда по предыдущей пришли ответы.
+    // Иначе на медленном канале (port-forward) тысячи сообщений ждут в очереди дольше таймаута и «теряются»,
+    // хотя часть из них брокер уже записал
+    public const int BatchSize = 200;
+
     public async Task<IReadOnlyList<SendOutcome>> SendAsync(IReadOnlyList<PlanItem> items)
     {
-        var config = new ProducerConfig(target)
+        // копия: ProducerConfig(ClientConfig) меняет переданный объект на месте, и его настройки утекли бы в консьюмер сверки
+        var config = new ProducerConfig(target.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal))
         {
             Acks = Acks.All,
             EnableIdempotence = true,
-            MessageTimeoutMs = 30_000,
+            MessageTimeoutMs = 120_000,
             RequestTimeoutMs = 30_000
         };
         using var producer = new ProducerBuilder<byte[]?, byte[]?>(config).Build();
 
+        var outcomes = new List<SendOutcome>(items.Count);
+        foreach (var batch in items.Chunk(BatchSize))
+        {
+            outcomes.AddRange(await SendBatchAsync(producer, batch).ConfigureAwait(false));
+            Console.WriteLine($"  отправлено {outcomes.Count} из {items.Count}");
+        }
+        producer.Flush(TimeSpan.FromSeconds(10));
+        return outcomes;
+    }
+
+    private static async Task<List<SendOutcome>> SendBatchAsync(IProducer<byte[]?, byte[]?> producer, PlanItem[] batch)
+    {
         var pending = new List<(PlanItem Item, Task<DeliveryResult<byte[]?, byte[]?>>? Task, SendOutcome? Failed)>();
-        foreach (var item in items)
+        foreach (var item in batch)
         {
             try
             {
@@ -94,7 +112,7 @@ public sealed class KafkaPlanSender(ClientConfig target) : IPlanSender
             }
         }
 
-        var outcomes = new List<SendOutcome>();
+        var outcomes = new List<SendOutcome>(batch.Length);
         foreach (var (item, task, failed) in pending)
         {
             if (failed is not null) { outcomes.Add(failed); continue; }
@@ -105,7 +123,7 @@ public sealed class KafkaPlanSender(ClientConfig target) : IPlanSender
             }
             catch (ProduceException<byte[]?, byte[]?> e)
             {
-                outcomes.Add(new SendOutcome(item.Index, Map(e.DeliveryResult.Status), null, null, e.Error.Reason));
+                outcomes.Add(new SendOutcome(item.Index, StatusOnError(e.Error.IsLocalError, e.DeliveryResult.Status), null, null, e.Error.Reason));
             }
             catch (Exception e)
             {
@@ -113,7 +131,6 @@ public sealed class KafkaPlanSender(ClientConfig target) : IPlanSender
                 outcomes.Add(new SendOutcome(item.Index, DeliveryStatus.Unknown, null, null, e.Message));
             }
         }
-        producer.Flush(TimeSpan.FromSeconds(10));
         return outcomes;
     }
 
@@ -123,6 +140,13 @@ public sealed class KafkaPlanSender(ClientConfig target) : IPlanSender
         PersistenceStatus.NotPersisted => DeliveryStatus.NotWritten,
         _ => DeliveryStatus.Unknown
     };
+
+    // Ошибка после того, как сообщение встало в очередь. «Точно не записано» — только если ответил брокер
+    // и сказал «не записал» (например, слишком большое сообщение). Ошибка на нашей стороне (таймаут, обрыв связи) —
+    // «результат неизвестен»: сообщение могло уже уйти, и брокер мог его записать.
+    // Проверено на dev: 93 сообщения с «Local: Message timed out» и статусом NotPersisted оказались в топике
+    public static DeliveryStatus StatusOnError(bool isLocalError, PersistenceStatus status) =>
+        !isLocalError && status == PersistenceStatus.NotPersisted ? DeliveryStatus.NotWritten : DeliveryStatus.Unknown;
 
     private static Headers ToKafkaHeaders(IReadOnlyList<MessageCheck.Header> headers)
     {

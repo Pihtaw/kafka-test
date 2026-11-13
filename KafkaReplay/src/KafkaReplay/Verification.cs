@@ -47,7 +47,8 @@ public static class ByteCompare
 // Чтение одной записи по адресу (топик, партиция, offset) без группы и без коммита
 public sealed class KafkaRecordFetcher(ClientConfig target) : IRecordFetcher, IDisposable
 {
-    private readonly IConsumer<byte[]?, byte[]?> _consumer = new ConsumerBuilder<byte[]?, byte[]?>(new ConsumerConfig(target)
+    // копия настроек: ConsumerConfig(ClientConfig) меняет переданный объект на месте
+    private readonly IConsumer<byte[]?, byte[]?> _consumer = new ConsumerBuilder<byte[]?, byte[]?>(new ConsumerConfig(target.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal))
     {
         GroupId = $"kafka-replay-verify-{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}",
         EnableAutoCommit = false,
@@ -60,7 +61,25 @@ public sealed class KafkaRecordFetcher(ClientConfig target) : IRecordFetcher, ID
         _consumer.Assign(new TopicPartitionOffset(topic, partition, offset));
         var cr = _consumer.Consume(TimeSpan.FromSeconds(10));
         if (cr is null || cr.Offset.Value != offset) return null;
+        return ToFetched(cr);
+    }
 
+    // записи партиции подряд от from до to включительно: один Assign на партицию, а не на каждую запись.
+    // По одной через туннель это ~0,5 с на запись (тысячи записей — десятки минут), подряд — секунды
+    public IEnumerable<(long Offset, FetchedRecord Record)> ReadRange(string topic, int partition, long from, long to)
+    {
+        _consumer.Assign(new TopicPartitionOffset(topic, partition, from));
+        while (true)
+        {
+            var cr = _consumer.Consume(TimeSpan.FromSeconds(10));
+            if (cr is null) yield break;   // не дочитали — оставшиеся сверятся по одной
+            yield return (cr.Offset.Value, ToFetched(cr));
+            if (cr.Offset.Value >= to) yield break;
+        }
+    }
+
+    private static FetchedRecord ToFetched(ConsumeResult<byte[]?, byte[]?> cr)
+    {
         var headers = cr.Message.Headers?.Select(h => new Header(h.Key, h.GetValueBytes())).ToList() ?? [];
         return new FetchedRecord(cr.Message.Key, headers, cr.Message.Value, cr.Message.Timestamp.UnixTimestampMs, cr.Message.Timestamp.Type.ToString());
     }
