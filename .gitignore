@@ -6,7 +6,6 @@ obj/
 .zed/
 *.user
 .DS_Store
-learning/CrashTest/fixed.txt
 
 # результаты запусков утилиты
 run-*/
