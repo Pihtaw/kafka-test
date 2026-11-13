@@ -19,14 +19,16 @@ public record CliOptions(
     string? TargetEnv,
     PartitionStrategy Partitioner,
     string? Plan,               // для --execute путь к plan.json
-    string OutDir)
+    string OutDir,
+    long Tail = CliOptions.DefaultTail)   // сколько записей после конца окна просматривать в каждой партиции
 {
     public const string TimeFormat = "yyyy-MM-dd HH:mm:sszzz";
+    public const long DefaultTail = 10_000;
 
     public const string Usage = """
         Проверка (ничего не отправляет):
           replay --topic <топик> --from "<с>" --to "<по>" (--bootstrap <host:port> | --source-env <ПЕРЕМЕННАЯ>)
-                 [--contracts <Dodo.EventRegistry.dll>] [--out <папка>]
+                 [--contracts <Dodo.EventRegistry.dll>] [--tail <N>|all] [--out <папка>]
                  [--routes <routes.json> (--target-bootstrap <host:port> | --target-env <ПЕРЕМЕННАЯ>) [--partitioner crc32|murmur2|keep]]
 
         Отправка по плану:
@@ -38,6 +40,8 @@ public record CliOptions(
           --source-env       источник — имя переменной окружения со строкой подключения в формате Dodo.Kafka:
                              BootstrapServers=...;Type=EventHubSas;SharedAccessKeyName=...;SharedAccessKey=...
           --contracts        сборка реестра контрактов, которой проверять события (без него — встроенные учебные)
+          --tail             сколько записей после конца окна просмотреть в каждой партиции в поисках «опоздавших»
+                             (время внутри окна, а в логе — после конца): 10000 по умолчанию, 0 — не смотреть, all — до конца
           --routes           таблица маршрутизации: тип события → целевой топик. С ней рядом с отчётом пишется plan.json
           --target-bootstrap цель — локальная Kafka без входа
           --target-env       цель — имя переменной окружения со строкой подключения
@@ -48,7 +52,7 @@ public record CliOptions(
         """;
 
     private static readonly string[] DryRunParams =
-        ["--topic", "--from", "--to", "--bootstrap", "--source-env", "--contracts", "--routes", "--target-bootstrap", "--target-env", "--partitioner", "--out"];
+        ["--topic", "--from", "--to", "--bootstrap", "--source-env", "--contracts", "--routes", "--target-bootstrap", "--target-env", "--partitioner", "--tail", "--out"];
     private static readonly string[] ExecuteParams = ["--plan", "--target-bootstrap", "--target-env"];
 
     public static bool TryParse(string[] args, DateTimeOffset now, out CliOptions? options, out string? error)
@@ -112,13 +116,26 @@ public record CliOptions(
             if (!Partitioning.TryParse(p, out partitioner)) { error = $"--partitioner: {p}? есть crc32, murmur2, keep"; return false; }
         }
 
+        long tail = DefaultTail;
+        if (values.TryGetValue("--tail", out var tailText) && !TryParseTail(tailText, out tail))
+        {
+            error = $"--tail: {tailText}? нужно число ≥ 0 или all";
+            return false;
+        }
+
         values.TryGetValue("--contracts", out var contracts);
         string outDir = values.TryGetValue("--out", out var o) ? o : $"run-{now:yyyyMMdd-HHmmss}";
 
         options = new CliOptions(RunMode.DryRun, topic, from, to, bootstrap, sourceEnv, contracts, routes,
-            targetBootstrap, targetEnv, partitioner, null, outDir);
+            targetBootstrap, targetEnv, partitioner, null, outDir, tail);
         error = null;
         return true;
+    }
+
+    public static bool TryParseTail(string s, out long tail)
+    {
+        if (string.Equals(s, "all", StringComparison.OrdinalIgnoreCase)) { tail = long.MaxValue; return true; }
+        return long.TryParse(s, NumberStyles.None, CultureInfo.InvariantCulture, out tail);
     }
 
     private static bool TryParseTime(string s, out DateTimeOffset t) =>

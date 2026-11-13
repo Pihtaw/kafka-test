@@ -43,11 +43,14 @@ public static class RangePlanner
         }).ToList();
     }
 
-    // без коммита, читаем [Start; End) через Assign
-    public static IEnumerable<ConsumeResult<byte[], byte[]>> Read(ClientConfig connection, List<PartitionPlan> plan, ISet<int> finished)
+    // без коммита, читаем [Start; readTo) через Assign; readTo по умолчанию — End (без хвоста)
+    public static IEnumerable<ConsumeResult<byte[], byte[]>> Read(ClientConfig connection, List<PartitionPlan> plan, ISet<int> finished,
+        IReadOnlyDictionary<int, long>? readTo = null)
     {
-        foreach (var p in plan.Where(p => p.End <= p.Start)) finished.Add(p.Partition);
-        var todo = plan.Where(p => p.End > p.Start).ToList();
+        long EndOf(PartitionPlan p) => readTo is not null && readTo.TryGetValue(p.Partition, out var e) ? e : p.End;
+
+        foreach (var p in plan.Where(p => EndOf(p) <= p.Start)) finished.Add(p.Partition);
+        var todo = plan.Where(p => EndOf(p) > p.Start).ToList();
         if (todo.Count == 0) yield break;
 
         var config = new ConsumerConfig(connection)
@@ -61,7 +64,7 @@ public static class RangePlanner
         using var consumer = new ConsumerBuilder<byte[], byte[]>(config).Build();
         consumer.Assign(todo.Select(p => new TopicPartitionOffset(new TopicPartition(p.Topic, p.Partition), p.Start)));
 
-        var endOf = todo.ToDictionary(p => p.Partition, p => p.End);
+        var endOf = todo.ToDictionary(p => p.Partition, EndOf);
         var notDone = todo.Select(p => p.Partition).ToHashSet();
 
         while (notDone.Count > 0)
