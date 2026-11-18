@@ -106,10 +106,9 @@ public sealed class KafkaPlanSender : IPlanSender, IDisposable
             Acks = Acks.All,
             EnableIdempotence = true,
             MessageTimeoutMs = 120_000,
-            RequestTimeoutMs = 30_000
+            RequestTimeoutMs = 30_000,
+            AllowAutoCreateTopics = false,
         };
-        // у продюсера librdkafka по умолчанию true: если топик пропал, брокер с auto.create.topics.enable создал бы его
-        config.Set("allow.auto.create.topics", "false");
         _producer = new ProducerBuilder<byte[]?, byte[]?>(config).Build();
     }
 
