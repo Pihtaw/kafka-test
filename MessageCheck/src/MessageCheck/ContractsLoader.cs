@@ -78,12 +78,12 @@ public static class ContractsLoader
         contracts = null;
         var catalog = new EventCatalog();
         var byTopic = new Dictionary<string, IReadOnlySet<string>>(StringComparer.Ordinal);
-        var versions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var seen = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
+        var versions = new Dictionary<string, string>(StringComparer.Ordinal);
+        var seen = new Dictionary<string, Type>(StringComparer.Ordinal);
 
         foreach (var (topic, types) in topics)
         {
-            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var names = new HashSet<string>(StringComparer.Ordinal);
             foreach (var type in types)
             {
                 string name = type.FullName!;

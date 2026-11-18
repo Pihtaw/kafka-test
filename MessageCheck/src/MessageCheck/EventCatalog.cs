@@ -5,8 +5,8 @@ namespace MessageCheck;
 // Каталог: полное имя типа из заголовка Event-Type -> класс
 public class EventCatalog
 {
-    // без учёта регистра
-    private readonly Dictionary<string, Type> _types = new(StringComparer.OrdinalIgnoreCase);
+    // с учётом регистра, как Dodo.Kafka: "Dodo.X.OrderCreated" и "dodo.x.ordercreated" — разные типы
+    private readonly Dictionary<string, Type> _types = new(StringComparer.Ordinal);
 
     public EventCatalog Add<TDto>() => Add(typeof(TDto));
 

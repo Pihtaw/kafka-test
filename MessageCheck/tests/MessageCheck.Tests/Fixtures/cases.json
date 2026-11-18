@@ -335,7 +335,7 @@
     "expectedReason": "DuplicateHeader"
   },
   {
-    "name": "Event-Type в другом регистре (полное имя)",
+    "name": "Event-Type в другом регистре — другой тип, как в Dodo.Kafka",
     "headers": [
       {
         "key": "Event-Type",
@@ -347,8 +347,8 @@
       }
     ],
     "payload": "{\"OrderId\":18,\"Amount\":100}",
-    "expectedVerdict": "Allowed",
-    "expectedReason": "Ok"
+    "expectedVerdict": "Skipped",
+    "expectedReason": "NotOurEvent"
   },
   {
     "name": "tombstone с заголовками",

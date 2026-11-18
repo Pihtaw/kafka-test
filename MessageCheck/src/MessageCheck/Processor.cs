@@ -29,8 +29,9 @@ public class Processor(EventCatalog catalog, IConverter converter, TimeSpan time
             // Task.Run: модуль может работать синхронно (JsonModule десериализует до того, как вернуть Task),
             // и тогда WaitAsync начал бы отсчёт уже после работы. Так таймаут ограничивает и синхронную часть;
             // сам поток после таймаута не прервать — он доработает в фоне, но результат не ждём
+            // один источник времени: тот же токен получают модуль, Task.Run и ожидание
             using var cts = new CancellationTokenSource(timeout);
-            result = await Task.Run(() => converter.ConvertAsync(record.Payload, dtoType, cts.Token), cts.Token).WaitAsync(timeout).ConfigureAwait(false);
+            result = await Task.Run(() => converter.ConvertAsync(record.Payload, dtoType, cts.Token), cts.Token).WaitAsync(cts.Token).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is TimeoutException or OperationCanceledException)
         {
