@@ -7,8 +7,22 @@ namespace KafkaReplay;
 // Без --execute: прочитать окно по времени -> проверить каждую запись -> отчeт -> (если есть маршруты) план отправки. Не пишем.
 public static class DryRunCommand
 {
+    // файлы прошлого запуска, рядом с которыми новый отчёт писать нельзя
+    private static readonly string[] Leftovers = ["plan.json", "execution.json"];
+
+    // Старый plan.json рядом с новым отчётом легко принять за новый и отправить: например, если новый план
+    // не записался (нет маршрута, окно прочитано не полностью). execution.json — уже была отправка.
+    // Ничего не удаляем сами — просим другую папку
+    public static string? LeftoversProblem(string outDir)
+    {
+        var found = Leftovers.Where(f => File.Exists(Path.Combine(outDir, f))).ToList();
+        return found.Count == 0 ? null
+            : $"в {Path.GetFullPath(outDir)} уже есть {string.Join(" и ", found)} от прошлого запуска — укажи другую --out";
+    }
+
     public static async Task<int> RunAsync(CliOptions opt)
     {
+        if (LeftoversProblem(opt.OutDir) is { } leftovers) return Cli.Block(leftovers);
         if (!Connections.TryResolve(opt.Bootstrap, opt.SourceEnv, out var source, out var error)) return Cli.Fail(error!);
         var connection = source!.ToClientConfig();
 
@@ -21,9 +35,6 @@ public static class DryRunCommand
         Dictionary<string, int> targetPartitions = [];
         if (opt.Routes is not null)
         {
-            if (File.Exists(Path.Combine(opt.OutDir, "execution.json")))
-                return Cli.Block($"в {Path.GetFullPath(opt.OutDir)} уже есть execution.json от прошлой отправки — укажи другую --out");
-
             if (!Routes.TryLoad(opt.Routes, out routes, out error)) return Cli.Fail(error!);
             if (!Connections.TryResolve(opt.TargetBootstrap, opt.TargetEnv, out target, out error)) return Cli.Fail(error!);
 
@@ -64,6 +75,7 @@ public static class DryRunCommand
         var processor = new Processor(catalog, new JsonModule(), TimeSpan.FromMilliseconds(500));
         var entries = new List<ReportEntry>();
         var items = new List<PlanItem>();
+        var unrouted = new SortedSet<string>(StringComparer.Ordinal);   // наши типы без решения в routes.json
         var finished = new HashSet<int>();
         var tally = new ReadTally(plan, readTo);
         var tail = new TailStats();
@@ -105,8 +117,13 @@ public static class DryRunCommand
             else if (routes is not null && eventType is not null)
             {
                 string? targetTopic = routes.TargetFor(eventType);
-                if (targetTopic is null)
-                    entry = entry with { Details = $"{entry.Details}; нет маршрута — не отправляется" };
+                if (targetTopic is null && !routes.HasRoute(eventType))
+                {
+                    unrouted.Add(eventType);
+                    entry = entry with { Details = $"{entry.Details}; нет маршрута — план не строится, пока тип не добавлен в routes.json" };
+                }
+                else if (targetTopic is null)
+                    entry = entry with { Details = $"{entry.Details}; в routes.json явно не отправлять (null)" };
                 else
                 {
                     int partition = Partitioning.Choose(opt.Partitioner, record.Key, cr.Partition.Value, targetPartitions[targetTopic]);
@@ -135,6 +152,16 @@ public static class DryRunCommand
         int outside = entries.Count(e => e.OutsideWindow);
         bool tailComplete = plan.TrueForAll(p => readTo[p.Partition] == p.High);
         int exitCode = ExitCodes.For(allRead, sumMatches, rejected);
+
+        // план не строится, если по нему нельзя отправлять или пользователь должен сначала что-то решить
+        var planBlockers = new List<string>();
+        if (routes is not null)
+        {
+            if (!readOk) planBlockers.Add("окно прочитано не полностью или сверка чтения не сошлась — отправлять по нему нельзя");
+            if (unrouted.Count > 0)
+                planBlockers.Add($"нет маршрута для типов: {string.Join(", ", unrouted)} — добавь их в routes.json: топик или null, чтобы явно не отправлять");
+            if (readOk && planBlockers.Count > 0) exitCode = ExitCodes.Blocked;
+        }
 
         // в консоль — только записи, на которые стоит посмотреть; полный список в report.md
         const int MaxConsoleRows = 20;
@@ -187,7 +214,7 @@ public static class DryRunCommand
                     lateAfterEnd = tail.Late(p.Partition), skippedInTail = tail.Skipped(p.Partition), finished = finished.Contains(p.Partition)
                 })
             },
-            plan = routes is null ? null : new { items = items.Count, partitioner = opt.Partitioner.ToString().ToLowerInvariant(), routes = routes.All },
+            plan = routes is null ? null : new { items = items.Count, partitioner = opt.Partitioner.ToString().ToLowerInvariant(), routes = routes.All, written = planBlockers.Count == 0, blockers = planBlockers },
             exitCode,
             records = entries
         };
@@ -203,8 +230,11 @@ public static class DryRunCommand
         Console.WriteLine($"       {mdPath}");
 
         // план — только по полностью и правильно прочитанному окну: иначе --execute отправил бы неполные данные
-        if (routes is not null && !readOk)
-            Console.WriteLine("План отправки НЕ записан: окно прочитано не полностью или сверка чтения не сошлась — отправлять по нему нельзя");
+        if (routes is not null && planBlockers.Count > 0)
+        {
+            Console.WriteLine("План отправки НЕ записан:");
+            foreach (var b in planBlockers) Console.WriteLine($"  - {b}");
+        }
         else if (routes is not null)
         {
             var notInPlan = entries.Where(e => e.TargetTopic is null).GroupBy(e => e.Status, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
@@ -247,12 +277,14 @@ public static class TargetTopics
     {
         using var admin = new AdminClientBuilder(new AdminClientConfig(target)).Build();
         var result = new Dictionary<string, int>(StringComparer.Ordinal);
+        var all = TopicLookup.All(admin, TimeSpan.FromSeconds(10));   // по имени не спрашиваем — так топик мог бы создаться
         foreach (var topic in topics)
         {
-            var meta = admin.GetMetadata(topic, TimeSpan.FromSeconds(10)).Topics[0];
-            if (meta.Error.IsError || meta.Partitions.Count == 0)
+            var meta = TopicLookup.Find(all, topic);
+            if (meta is null || meta.Error.IsError || meta.Partitions.Count == 0)
             {
-                error = $"целевого топика {topic} нет в цели ({meta.Error.Reason}). Создай его заранее: утилита топики не создаёт";
+                string reason = meta is null ? "" : $" ({meta.Error.Reason})";
+                error = $"целевого топика {topic} нет в цели{reason}. Создай его заранее: утилита топики не создаёт";
                 return result;
             }
             result[topic] = meta.Partitions.Count;

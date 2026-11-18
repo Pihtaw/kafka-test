@@ -7,28 +7,34 @@ namespace KafkaReplay;
 //   {
 //     "MessageCheck.SampleContracts.OrderCreated": "orders-copy",
 //     "MessageCheck.SampleContracts.OrderCancelled": "orders-copy",
-//     "*": "everything-else"          ← необязательно: куда отправлять остальные наши события
+//     "MessageCheck.SampleContracts.OrderPaid": null,   ← явно НЕ отправлять этот тип
+//     "*": "everything-else"          ← необязательно: куда отправлять остальные наши события ("*": null — остальные не отправлять)
 //   }
-// Нет маршрута — запись не отправляется
+// Тип сравнивается с учётом регистра, как в Dodo.Kafka.
+// Нашего типа нет в таблице и нет "*" — это ошибка таблицы: план не строится, пока пользователь не решит, куда этот тип
 public sealed class Routes
 {
     public const string Default = "*";
-    private readonly Dictionary<string, string> _routes;
+    private readonly Dictionary<string, string?> _routes;
 
-    private Routes(Dictionary<string, string> routes)
+    private Routes(Dictionary<string, string?> routes)
     {
         _routes = routes;
-        TargetTopics = routes.Values.Distinct(StringComparer.Ordinal).ToList();
+        TargetTopics = routes.Values.OfType<string>().Distinct(StringComparer.Ordinal).ToList();
     }
 
     public IReadOnlyCollection<string> TargetTopics { get; }
-    public IReadOnlyDictionary<string, string> All => _routes;
+    public IReadOnlyDictionary<string, string?> All => _routes;
 
+    // null — не отправлять: либо явно (null в таблице), либо маршрута нет (см. HasRoute)
     public string? TargetFor(string eventType) =>
         _routes.TryGetValue(eventType, out var topic) ? topic : _routes.GetValueOrDefault(Default);
 
-    public static Routes FromDictionary(IDictionary<string, string> routes) =>
-        new(new Dictionary<string, string>(routes, StringComparer.OrdinalIgnoreCase));
+    // есть ли решение по типу: топик или явный null
+    public bool HasRoute(string eventType) => _routes.ContainsKey(eventType) || _routes.ContainsKey(Default);
+
+    public static Routes FromDictionary(IDictionary<string, string?> routes) =>
+        new(new Dictionary<string, string?>(routes, StringComparer.Ordinal));
 
     public static bool TryLoad(string path, out Routes? routes, out string? error)
     {
@@ -46,20 +52,20 @@ public sealed class Routes
     public static bool TryParse(string json, out Routes? routes, out string? error)
     {
         routes = null;
-        Dictionary<string, string>? raw;
-        try { raw = JsonSerializer.Deserialize<Dictionary<string, string>>(json); }
+        Dictionary<string, string?>? raw;
+        try { raw = JsonSerializer.Deserialize<Dictionary<string, string?>>(json); }
         catch (JsonException e)
         {
-            error = $"таблица маршрутизации: ожидается JSON-объект «тип события → топик»: {e.Message}";
+            error = $"таблица маршрутизации: ожидается JSON-объект «тип события → топик или null»: {e.Message}";
             return false;
         }
         if (raw is null || raw.Count == 0) { error = "таблица маршрутизации пустая"; return false; }
 
         foreach (var (type, topic) in raw)
         {
-            if (string.IsNullOrWhiteSpace(type) || string.IsNullOrWhiteSpace(topic))
+            if (string.IsNullOrWhiteSpace(type) || (topic is not null && string.IsNullOrWhiteSpace(topic)))
             {
-                error = "в таблице маршрутизации пустой тип события или топик";
+                error = "в таблице маршрутизации пустой тип события или топик (не отправлять — null)";
                 return false;
             }
         }

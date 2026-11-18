@@ -6,6 +6,18 @@ namespace KafkaReplay;
 // план чтения одной партиции: границы фиксируются до чтения
 public record PartitionPlan(string Topic, int Partition, long Low, long High, long Start, long End);
 
+// Метаданные топика — по точному имени из списка всех топиков кластера.
+// GetMetadata(topic) мог бы СОЗДАТЬ несуществующий топик: admin-клиент в librdkafka работает как продюсер,
+// у продюсера allow.auto.create.topics по умолчанию true, а у брокера Kafka auto.create.topics.enable по умолчанию тоже true.
+// Запрос метаданных всех топиков не создаёт ничего ни при каких настройках
+public static class TopicLookup
+{
+    public static List<TopicMetadata> All(IAdminClient admin, TimeSpan timeout) => admin.GetMetadata(timeout).Topics;
+
+    public static TopicMetadata? Find(IReadOnlyList<TopicMetadata> all, string topic) =>
+        all.FirstOrDefault(t => string.Equals(t.Topic, topic, StringComparison.Ordinal));
+}
+
 // чтение диапазона по времени, как в RangeReader, только байты и без коммита
 public static class RangePlanner
 {
@@ -14,7 +26,8 @@ public static class RangePlanner
     public static async Task<List<PartitionPlan>?> PlanAsync(ClientConfig connection, string topic, long fromMs, long toMs)
     {
         using var admin = new AdminClientBuilder(new AdminClientConfig(connection)).Build();
-        var meta = admin.GetMetadata(topic, RequestTimeout).Topics[0];
+        var meta = TopicLookup.Find(TopicLookup.All(admin, RequestTimeout), topic);
+        if (meta is null) { Console.WriteLine($"ОТКАЗ: топика '{topic}' нет в кластере"); return null; }
         if (meta.Error.IsError) { Console.WriteLine($"ОТКАЗ: топик '{topic}' недоступен: {meta.Error.Reason}"); return null; }
 
         var partitions = meta.Partitions.Select(p => new TopicPartition(topic, p.PartitionId)).OrderBy(tp => tp.Partition.Value).ToList();

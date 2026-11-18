@@ -56,4 +56,37 @@ public class RoutesTests
     [Fact]
     public void Bootstrap_order_does_not_matter() =>
         Assert.True(Routes.SameCluster("a:1, b:2", "b:2,a:1"));
+
+    [Fact]
+    public void Event_type_is_case_sensitive_as_in_dodo_kafka()
+    {
+        var r = Parse("""{"A.OrderCreated":"orders-copy"}""");
+        Assert.Null(r.TargetFor("a.ordercreated"));
+        Assert.False(r.HasRoute("a.ordercreated"));
+    }
+
+    [Fact]
+    public void Null_means_do_not_send_explicitly()
+    {
+        var r = Parse("""{"A.OrderCreated":"orders-copy","A.OrderPaid":null}""");
+        Assert.Null(r.TargetFor("A.OrderPaid"));
+        Assert.True(r.HasRoute("A.OrderPaid"));      // решение есть — план строится
+        Assert.False(r.HasRoute("A.Other"));         // решения нет — план не строится
+        Assert.Equal(new[] { "orders-copy" }, r.TargetTopics);
+    }
+
+    [Fact]
+    public void Star_null_skips_all_other_types()
+    {
+        var r = Parse("""{"A.OrderCreated":"orders-copy","*":null}""");
+        Assert.True(r.HasRoute("A.Other"));
+        Assert.Null(r.TargetFor("A.Other"));
+    }
+
+    [Fact]
+    public void Empty_topic_is_still_rejected()
+    {
+        Assert.False(Routes.TryParse("""{"A.OrderCreated":" "}""", out _, out var error));
+        Assert.Contains("пустой", error);
+    }
 }

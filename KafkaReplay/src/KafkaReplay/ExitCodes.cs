@@ -6,7 +6,7 @@ public static class ExitCodes
     public const int Ok = 0;           // всё прочитано, сводка сходится, отказов нет
     public const int HasRejected = 1;  // отработала, но есть записи, отклонённые проверкой
     public const int Incomplete = 2;   // не дочитали диапазон или сводка не сходится
-    public const int Blocked = 3;      // ошибка проверки, не запустилась: параметры, файл подключения, нет связи с Kafka
+    public const int Blocked = 3;      // не запустилась (параметры, подключение, нет связи) или план строить нельзя (нет маршрута)
 
     public static int For(bool allRead, bool sumMatches, int rejected)
     {
@@ -20,7 +20,7 @@ public static class ExitCodes
         Ok => "всё прочитано, отказов нет",
         HasRejected => "есть записи, отклонённые проверкой",
         Incomplete => "диапазон дочитан не полностью или сводка не сходится",
-        Blocked => "не запустилась",
+        Blocked => "заблокировано: не запустилась или план по этим данным строить нельзя",
         _ => "неизвестный код"
     };
 }
