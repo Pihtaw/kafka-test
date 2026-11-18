@@ -73,7 +73,7 @@ public static class ReportMarkdown
     {
         Directory.CreateDirectory(outDir);
         string path = Path.Combine(outDir, fileName);
-        await File.WriteAllTextAsync(path, content).ConfigureAwait(false);
+        await AtomicFile.WriteAllTextAsync(path, content).ConfigureAwait(false);
         return Path.GetFullPath(path);
     }
 

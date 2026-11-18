@@ -7,8 +7,11 @@ namespace KafkaReplay;
 // проверить план целиком -> отправить -> побайтово сверить отправленное -> статусы и отчeт
 public static class ExecuteCommand
 {
-    private static string VerifyText(VerifyResult v) =>
-        v.Matches ? "байты совпали" : "❌ " + string.Join("; ", v.Differences);
+    private static string VerifyText(VerifyResult v)
+    {
+        if (v.Matches) return "байты совпали";
+        return v.NotVerified is not null ? $"⚠ не сверено: {v.NotVerified}" : "❌ " + string.Join("; ", v.Differences);
+    }
 
     public static async Task<int> RunAsync(CliOptions opt)
     {
@@ -46,7 +49,11 @@ public static class ExecuteCommand
 
         // отправка
         ExecutionFile state;
-        try { state = await Executor.RunAsync(plan, previous, new KafkaPlanSender(connection), s => s.Save(statePath), DateTimeOffset.Now).ConfigureAwait(false); }
+        try
+        {
+            using var sender = new KafkaPlanSender(connection);
+            state = await Executor.RunAsync(plan, previous, sender, s => s.Save(statePath), DateTimeOffset.Now).ConfigureAwait(false);
+        }
         catch (KafkaException e) { return Cli.Fail($"нет связи с целью ({target.Describe()}): {e.Error.Reason}"); }
 
         // побайтовая сверка
@@ -60,17 +67,31 @@ public static class ExecuteCommand
             foreach (var group in toVerify.GroupBy(s => (Topic: plan.Items[s.Index].TargetTopic, Partition: s.Partition!.Value)))
             {
                 var byOffset = group.ToDictionary(s => s.Offset!.Value);
-                var range = fetcher.ReadRange(group.Key.Topic, group.Key.Partition, byOffset.Keys.Min(), byOffset.Keys.Max());
-                foreach (var (offset, record) in range.Where(r => byOffset.ContainsKey(r.Offset)))
+                try
                 {
-                    var sent = byOffset[offset];
-                    byOffset.Remove(offset);
-                    verified[sent.Index] = ByteCompare.Compare(plan.Items[sent.Index], record);
+                    var range = fetcher.ReadRange(group.Key.Topic, group.Key.Partition, byOffset.Keys.Min(), byOffset.Keys.Max());
+                    foreach (var (offset, record) in range.Where(r => byOffset.ContainsKey(r.Offset)))
+                    {
+                        var sent = byOffset[offset];
+                        byOffset.Remove(offset);
+                        verified[sent.Index] = ByteCompare.Compare(plan.Items[sent.Index], record);
+                    }
+                    // что не встретилось при чтении подряд — по одной, как раньше
+                    foreach (var missing in byOffset.Values.ToList())
+                    {
+                        verified[missing.Index] = ByteCompare.Compare(plan.Items[missing.Index], fetcher.Fetch(group.Key.Topic, group.Key.Partition, missing.Offset!.Value));
+                        byOffset.Remove(missing.Offset!.Value);
+                    }
+                    Console.WriteLine($"  {group.Key.Topic}/p{group.Key.Partition}: сверено {group.Count()}");
                 }
-                // что не встретилось при чтении подряд — по одной, как раньше
-                foreach (var missing in byOffset.Values)
-                    verified[missing.Index] = ByteCompare.Compare(plan.Items[missing.Index], fetcher.Fetch(group.Key.Topic, group.Key.Partition, missing.Offset!.Value));
-                Console.WriteLine($"  {group.Key.Topic}/p{group.Key.Partition}: сверено {group.Count()}");
+                catch (KafkaException e)
+                {
+                    // чтение цели оборвалось: что успели — сверено, остальное «не сверено» с причиной, а не потеряно.
+                    // Повторный --execute ничего не отправит и сверит их заново
+                    foreach (var index in byOffset.Values.Select(left => left.Index))
+                        verified[index] = VerifyResult.Failed(index, e.Error.Reason);
+                    Console.WriteLine($"  ⚠ {group.Key.Topic}/p{group.Key.Partition}: сверка оборвалась ({e.Error.Reason}), не сверено {byOffset.Count}");
+                }
             }
             state = state with { Verification = verified.Values.OrderBy(v => v.Index).ToList() };
             state.Save(statePath);
@@ -86,7 +107,8 @@ public static class ExecuteCommand
 
         int written = state.Items.Count(s => s.Status == DeliveryStatus.Written);
         int matched = state.Verification.Count(v => v.Matches);
-        int mismatched = state.Verification.Count(v => !v.Matches);
+        int mismatched = state.Verification.Count(v => !v.Matches && v.NotVerified is null);
+        int notVerified = state.Verification.Count(v => v.NotVerified is not null);
 
         // в консоль — только строки не «записано и совпало»; полный список в execution.md
         const int MaxConsoleRows = 20;
@@ -107,7 +129,8 @@ public static class ExecuteCommand
         }
         Console.WriteLine();
         foreach (var (status, count) in byStatus) Console.WriteLine($"  {status.Ru(),-21} {count}");
-        Console.WriteLine($"Побайтовая сверка: совпало {matched} из {written} записанных" + (mismatched > 0 ? $", расхождений {mismatched}" : ""));
+        Console.WriteLine($"Побайтовая сверка: совпало {matched} из {written} записанных" + (mismatched > 0 ? $", расхождений {mismatched}" : "") +
+                          (notVerified > 0 ? $", ⚠ не сверено {notVerified} — запусти --execute ещё раз, он только досверит" : ""));
         Console.WriteLine(converges ? $"✅ Статусы сходятся: {total} из {plan.TotalRecords} записей" : $"❌ Статусы НЕ сходятся: {total} из {plan.TotalRecords}");
 
         string mdPath = await ReportMarkdown.WriteAsync(Path.GetDirectoryName(statePath)!, "execution.md", BuildMarkdown(plan, state, byStatus, target, converges)).ConfigureAwait(false);
@@ -124,7 +147,7 @@ public static class ExecuteCommand
         Console.WriteLine($"Код выхода {exitCode}: " + (exitCode switch
         {
             ExitCodes.Ok => "всё из плана записано и совпало байт в байт",
-            ExitCodes.HasRejected => "есть «точно не записано», «результат неизвестен» или расхождения при сверке",
+            ExitCodes.HasRejected => "есть «точно не записано», «результат неизвестен», «не отправлялось», расхождения или не сверенные записи",
             _ => "статусы не сходятся"
         }));
         return exitCode;

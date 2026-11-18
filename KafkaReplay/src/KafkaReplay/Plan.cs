@@ -126,7 +126,7 @@ public static class PlanStore
     {
         Directory.CreateDirectory(outDir);
         string path = Path.Combine(outDir, "plan.json");
-        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(plan, Options)).ConfigureAwait(false);
+        await AtomicFile.WriteAllTextAsync(path, JsonSerializer.Serialize(plan, Options)).ConfigureAwait(false);
         return Path.GetFullPath(path);
     }
 

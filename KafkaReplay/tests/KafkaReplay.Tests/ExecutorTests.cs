@@ -103,6 +103,66 @@ public class ExecutorTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => Run(plan, foreign, new FakeSender(_ => DeliveryStatus.Written)));
     }
 
+    // пачки по 2: 0,1 | 2,3 | 4
+    [Fact]
+    public async Task Progress_is_saved_after_each_batch()
+    {
+        var plan = PlanTests.MakePlan(5);
+        var saves = new List<ExecutionFile>();
+        await Executor.RunAsync(plan, null, new FakeSender(_ => DeliveryStatus.Written), saves.Add, Now, batchSize: 2);
+
+        // перед пачкой и после неё — по сохранению; после первой пачки уже видно, что 0 и 1 записаны
+        var afterFirst = saves[1];
+        Assert.Equal(2, afterFirst.Items.Count);
+        Assert.True(afterFirst.Items.All(s => s.Status == DeliveryStatus.Written));
+    }
+
+    [Fact]
+    public async Task Sending_stops_after_batch_with_failure_and_rest_is_not_sent()
+    {
+        var plan = PlanTests.MakePlan(5);
+        var sender = new FakeSender(i => i.Index == 1 ? DeliveryStatus.NotWritten : DeliveryStatus.Written);
+        var state = await Executor.RunAsync(plan, null, sender, _ => { }, Now, batchSize: 2);
+
+        Assert.Equal([0, 1], sender.Sent);   // дальше первой пачки не пошли — порядок в партиции не ломается
+        Assert.Equal(
+            [DeliveryStatus.Written, DeliveryStatus.NotWritten, DeliveryStatus.NotSent, DeliveryStatus.NotSent, DeliveryStatus.NotSent],
+            state.Items.Select(s => s.Status).ToArray());
+    }
+
+    [Fact]
+    public async Task Repeat_continues_from_the_failed_place()
+    {
+        var plan = PlanTests.MakePlan(5);
+        var first = await Executor.RunAsync(plan, null, new FakeSender(i => i.Index == 1 ? DeliveryStatus.NotWritten : DeliveryStatus.Written), _ => { }, Now, batchSize: 2);
+
+        var sender = new FakeSender(_ => DeliveryStatus.Written);
+        var second = await Executor.RunAsync(plan, first, sender, _ => { }, Now, batchSize: 2);
+
+        Assert.Equal([1, 2, 3, 4], sender.Sent);   // записанный 0 не повторяется
+        Assert.True(second.Items.All(s => s.Status == DeliveryStatus.Written));
+    }
+
+    [Fact]
+    public async Task Unknown_also_stops_sending()
+    {
+        var plan = PlanTests.MakePlan(4);
+        var sender = new FakeSender(i => i.Index == 0 ? DeliveryStatus.Unknown : DeliveryStatus.Written);
+        var state = await Executor.RunAsync(plan, null, sender, _ => { }, Now, batchSize: 2);
+
+        Assert.Equal([0, 1], sender.Sent);
+        Assert.Equal(DeliveryStatus.NotSent, state.Items[3].Status);
+    }
+
+    [Fact]
+    public void Not_verified_is_not_a_mismatch()
+    {
+        var v = VerifyResult.Failed(3, "Local: Timed out");
+        Assert.False(v.Matches);
+        Assert.Equal("Local: Timed out", v.NotVerified);
+        Assert.Empty(v.Differences);
+    }
+
     // --- побайтовая сверка ---
 
     private static FetchedRecord Fetched(PlanItem item)
@@ -145,11 +205,12 @@ public class ExecutorTests
     }
 
     [Fact]
-    public void Different_time_is_shown_but_does_not_fail()
+    public void Record_time_is_not_compared()
     {
+        // в цели время записи — время переналивки, это не расхождение
         var item = PlanTests.MakePlan().Items[0];
-        var v = ByteCompare.Compare(item, Fetched(item) with { TimestampMs = 1, TimestampType = "LogAppendTime" });
+        var v = ByteCompare.Compare(item, Fetched(item) with { TimestampMs = 1, TimestampType = "CreateTime" });
         Assert.True(v.Matches);
-        Assert.Contains(v.Differences, d => d.Contains("LogAppendTime"));
+        Assert.Empty(v.Differences);
     }
 }

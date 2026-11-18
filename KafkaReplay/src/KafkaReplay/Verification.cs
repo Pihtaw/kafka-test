@@ -33,11 +33,8 @@ public static class ByteCompare
                 else if (!Same(expected.Headers[i].Value, actual.Headers[i].Value)) diffs.Add($"заголовок {expected.Headers[i].Key}: значение отличается");
             }
 
-        bool matches = diffs.Count == 0;
-        if (actual.TimestampMs != planned.TimestampMs)
-            diffs.Add($"время {actual.TimestampMs} ({actual.TimestampType}), ожидали {planned.TimestampMs} — не влияет на совпадение");
-
-        return new VerifyResult(planned.Index, matches, diffs);
+        // время записи не сравниваем: в цели оно — время переналивки (см. KafkaPlanSender)
+        return new VerifyResult(planned.Index, diffs.Count == 0, diffs);
     }
 
     private static bool Same(byte[]? a, byte[]? b) =>

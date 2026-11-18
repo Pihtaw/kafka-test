@@ -134,7 +134,7 @@ public static class ReportWriter
     {
         Directory.CreateDirectory(outDir);
         string path = Path.Combine(outDir, "report.json");
-        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(report, Options)).ConfigureAwait(false);
+        await AtomicFile.WriteAllTextAsync(path, JsonSerializer.Serialize(report, Options)).ConfigureAwait(false);
         return Path.GetFullPath(path);
     }
 }
