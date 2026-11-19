@@ -23,6 +23,14 @@ public class Processor(EventCatalog catalog, IConverter converter, TimeSpan time
             return fail!;
         var versionText = version ?? "без версии";
 
+        // другой формат даёт понятный отказ, а не ошибку парсера JSON.
+        if (!HeaderReader.TryReadOptional(record.Headers, HeaderNames.ContentType, out var contentType, out fail))
+            return fail!;
+        if (!HeaderReader.TryReadOptional(record.Headers, HeaderNames.ContentEncoding, out var contentEncoding, out fail))
+            return fail!;
+        if (FormatProblem(contentType, contentEncoding) is { } problem)
+            return new Decision(Verdict.ConversionError, Reason.UnsupportedFormat, problem);
+
         object? result;
         try
         {
@@ -63,5 +71,20 @@ public class Processor(EventCatalog catalog, IConverter converter, TimeSpan time
             details += $"; лишние поля: {string.Join(", ", extra)}";
 
         return new Decision(Verdict.Allowed, Reason.Ok, details, resultJson);
+    }
+
+    // "application/json; charset=utf-8" — тоже JSON. Другой формат появится — здесь будет выбор модуля, а не отказ
+    public static string? FormatProblem(string? contentType, string? contentEncoding)
+    {
+        string? mediaType = contentType?.Split(';')[0].Trim();
+        if (mediaType is not null && !string.Equals(mediaType, "application/json", StringComparison.OrdinalIgnoreCase))
+            return $"{HeaderNames.ContentType}: {contentType} — поддерживается только application/json";
+
+        string? encoding = contentEncoding?.Trim();
+        if (encoding is not null && !string.Equals(encoding, "utf-8", StringComparison.OrdinalIgnoreCase)
+                                 && !string.Equals(encoding, "utf8", StringComparison.OrdinalIgnoreCase))
+            return $"{HeaderNames.ContentEncoding}: {contentEncoding} — поддерживается только utf-8";
+
+        return null;
     }
 }

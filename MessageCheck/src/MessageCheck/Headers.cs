@@ -6,6 +6,8 @@ public static class HeaderNames
 {
     public const string EventType = "Event-Type";
     public const string PackageVersion = "Event-PackageVersion";
+    public const string ContentType = "Content-Type";           // Dodo.Kafka пишет application/json
+    public const string ContentEncoding = "Content-Encoding";   // Dodo.Kafka пишет utf-8
 }
 
 public static class HeaderReader
