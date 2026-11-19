@@ -335,7 +335,7 @@
     "expectedReason": "DuplicateHeader"
   },
   {
-    "name": "Event-Type в другом регистре (полное имя)",
+    "name": "Event-Type в другом регистре — другой тип, как в Dodo.Kafka",
     "headers": [
       {
         "key": "Event-Type",
@@ -347,8 +347,8 @@
       }
     ],
     "payload": "{\"OrderId\":18,\"Amount\":100}",
-    "expectedVerdict": "Allowed",
-    "expectedReason": "Ok"
+    "expectedVerdict": "Skipped",
+    "expectedReason": "NotOurEvent"
   },
   {
     "name": "tombstone с заголовками",
@@ -404,5 +404,117 @@
     "payload": "{\"orderId\":20,\"amount\":100}",
     "expectedVerdict": "ConversionError",
     "expectedReason": "InvalidPayload"
+  },
+  {
+    "name": "заголовки формата как у Dodo.Kafka: application/json, utf-8",
+    "headers": [
+      {
+        "key": "Event-Type",
+        "value": "MessageCheck.SampleContracts.OrderCreated"
+      },
+      {
+        "key": "Event-PackageVersion",
+        "value": "1.0.0"
+      },
+      {
+        "key": "Content-Type",
+        "value": "application/json"
+      },
+      {
+        "key": "Content-Encoding",
+        "value": "utf-8"
+      }
+    ],
+    "payload": "{\"OrderId\":40,\"Amount\":100}",
+    "expectedVerdict": "Allowed",
+    "expectedReason": "Ok"
+  },
+  {
+    "name": "Content-Type с параметром charset — тоже JSON",
+    "headers": [
+      {
+        "key": "Event-Type",
+        "value": "MessageCheck.SampleContracts.OrderCreated"
+      },
+      {
+        "key": "Event-PackageVersion",
+        "value": "1.0.0"
+      },
+      {
+        "key": "Content-Type",
+        "value": "application/json; charset=utf-8"
+      }
+    ],
+    "payload": "{\"OrderId\":40,\"Amount\":100}",
+    "expectedVerdict": "Allowed",
+    "expectedReason": "Ok"
+  },
+  {
+    "name": "Content-Type не JSON — понятный отказ до чтения",
+    "headers": [
+      {
+        "key": "Event-Type",
+        "value": "MessageCheck.SampleContracts.OrderCreated"
+      },
+      {
+        "key": "Event-PackageVersion",
+        "value": "1.0.0"
+      },
+      {
+        "key": "Content-Type",
+        "value": "application/avro"
+      }
+    ],
+    "payload": "{\"OrderId\":40,\"Amount\":100}",
+    "expectedVerdict": "ConversionError",
+    "expectedReason": "UnsupportedFormat"
+  },
+  {
+    "name": "Content-Encoding не UTF-8 — понятный отказ до чтения",
+    "headers": [
+      {
+        "key": "Event-Type",
+        "value": "MessageCheck.SampleContracts.OrderCreated"
+      },
+      {
+        "key": "Event-PackageVersion",
+        "value": "1.0.0"
+      },
+      {
+        "key": "Content-Type",
+        "value": "application/json"
+      },
+      {
+        "key": "Content-Encoding",
+        "value": "utf-16"
+      }
+    ],
+    "payload": "{\"OrderId\":40,\"Amount\":100}",
+    "expectedVerdict": "ConversionError",
+    "expectedReason": "UnsupportedFormat"
+  },
+  {
+    "name": "Content-Type повторяется с разными значениями",
+    "headers": [
+      {
+        "key": "Event-Type",
+        "value": "MessageCheck.SampleContracts.OrderCreated"
+      },
+      {
+        "key": "Event-PackageVersion",
+        "value": "1.0.0"
+      },
+      {
+        "key": "Content-Type",
+        "value": "application/json"
+      },
+      {
+        "key": "Content-Type",
+        "value": "application/xml"
+      }
+    ],
+    "payload": "{\"OrderId\":40,\"Amount\":100}",
+    "expectedVerdict": "Rejected",
+    "expectedReason": "DuplicateHeader"
   }
 ]

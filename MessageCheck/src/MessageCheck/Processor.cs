@@ -23,12 +23,23 @@ public class Processor(EventCatalog catalog, IConverter converter, TimeSpan time
             return fail!;
         var versionText = version ?? "без версии";
 
+        // другой формат даёт понятный отказ, а не ошибку парсера JSON.
+        if (!HeaderReader.TryReadOptional(record.Headers, HeaderNames.ContentType, out var contentType, out fail))
+            return fail!;
+        if (!HeaderReader.TryReadOptional(record.Headers, HeaderNames.ContentEncoding, out var contentEncoding, out fail))
+            return fail!;
+        if (FormatProblem(contentType, contentEncoding) is { } problem)
+            return new Decision(Verdict.ConversionError, Reason.UnsupportedFormat, problem);
+
         object? result;
         try
         {
-            // TODO: ConvertAsync сейчас синхронный, проверить на настоящем
+            // Task.Run: модуль может работать синхронно (JsonModule десериализует до того, как вернуть Task),
+            // и тогда WaitAsync начал бы отсчёт уже после работы. Так таймаут ограничивает и синхронную часть;
+            // сам поток после таймаута не прервать — он доработает в фоне, но результат не ждём
+            // один источник времени: тот же токен получают модуль, Task.Run и ожидание
             using var cts = new CancellationTokenSource(timeout);
-            result = await converter.ConvertAsync(record.Payload, dtoType, cts.Token).WaitAsync(timeout);
+            result = await Task.Run(() => converter.ConvertAsync(record.Payload, dtoType, cts.Token), cts.Token).WaitAsync(cts.Token).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is TimeoutException or OperationCanceledException)
         {
@@ -60,5 +71,20 @@ public class Processor(EventCatalog catalog, IConverter converter, TimeSpan time
             details += $"; лишние поля: {string.Join(", ", extra)}";
 
         return new Decision(Verdict.Allowed, Reason.Ok, details, resultJson);
+    }
+
+    // "application/json; charset=utf-8" — тоже JSON. Другой формат появится — здесь будет выбор модуля, а не отказ
+    public static string? FormatProblem(string? contentType, string? contentEncoding)
+    {
+        string? mediaType = contentType?.Split(';')[0].Trim();
+        if (mediaType is not null && !string.Equals(mediaType, "application/json", StringComparison.OrdinalIgnoreCase))
+            return $"{HeaderNames.ContentType}: {contentType} — поддерживается только application/json";
+
+        string? encoding = contentEncoding?.Trim();
+        if (encoding is not null && !string.Equals(encoding, "utf-8", StringComparison.OrdinalIgnoreCase)
+                                 && !string.Equals(encoding, "utf8", StringComparison.OrdinalIgnoreCase))
+            return $"{HeaderNames.ContentEncoding}: {contentEncoding} — поддерживается только utf-8";
+
+        return null;
     }
 }

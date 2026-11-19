@@ -1,0 +1,56 @@
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches: [main, replay-cli]
+
+jobs:
+  unit:
+    name: сборка и юнит-тесты
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: restore
+        run: dotnet restore KafkaReplay.slnx
+
+      # анализаторы и TreatWarningsAsErrors из Directory.Build.props — сборка падает на любом предупреждении
+      - name: build
+        run: dotnet build KafkaReplay.slnx --no-restore -c Release
+
+      - name: test
+        run: dotnet test KafkaReplay.slnx --no-build -c Release --logger trx --results-directory test-results
+
+      - name: результаты тестов
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results
+
+  demo:
+    name: демо на локальной Kafka (Seeder → проверка → отправка → повтор)
+    runs-on: ubuntu-latest
+    needs: unit
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      # Docker на раннерах GitHub уже есть; demo.sh сам поднимает Kafka из docker-compose.yml
+      - name: demo
+        run: bash scripts/demo.sh
+
+      - name: отчёты демо
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-reports
+          path: KafkaReplay/src/KafkaReplay/run-demo-*

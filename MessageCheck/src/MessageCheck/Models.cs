@@ -28,7 +28,8 @@ public enum Reason
     ModuleTimeout,
     ModuleCrashed,
     ModuleInvalidResponse,
-    Tombstone
+    Tombstone,
+    UnsupportedFormat      // Content-Type не JSON или Content-Encoding не UTF-8
 }
 
 public record Decision(
