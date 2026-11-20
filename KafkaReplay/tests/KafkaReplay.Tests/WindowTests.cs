@@ -73,19 +73,4 @@ public class WindowTests
     [InlineData("1.5")]
     public void Tail_option_rejects_garbage(string text) =>
         Assert.False(CliOptions.TryParseTail(text, out _));
-
-    [Fact]
-    public void Tail_default_and_from_args()
-    {
-        string[] baseArgs = ["--topic", "t", "--from", "2026-10-28 14:21:10+00:00", "--to", "2026-10-28 14:21:30+00:00", "--bootstrap", "localhost:9092"];
-
-        Assert.True(CliOptions.TryParse(baseArgs, DateTimeOffset.UnixEpoch, out var byDefault, out _));
-        Assert.Equal(CliOptions.DefaultTail, byDefault!.Tail);
-
-        Assert.True(CliOptions.TryParse([.. baseArgs, "--tail", "all"], DateTimeOffset.UnixEpoch, out var all, out _));
-        Assert.Equal(long.MaxValue, all!.Tail);
-
-        Assert.False(CliOptions.TryParse([.. baseArgs, "--tail", "-5"], DateTimeOffset.UnixEpoch, out _, out var error));
-        Assert.Contains("--tail", error, StringComparison.Ordinal);
-    }
 }

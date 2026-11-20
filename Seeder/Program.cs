@@ -96,12 +96,12 @@ var inv = System.Globalization.CultureInfo.InvariantCulture;
 string window = $"--from \"{before.ToString(timeFormat, inv)}\" --to \"{after.ToString(timeFormat, inv)}\"";
 if (contractsPath is null)
 {
-    Console.WriteLine($"  cd ../KafkaReplay/src/KafkaReplay && dotnet run -- --bootstrap {bootstrap} --topic {topic} {window}");
+    Console.WriteLine($"  cd ../KafkaReplay/src/KafkaReplay && dotnet run -- check --bootstrap {bootstrap} --topic {topic} {window}");
     Console.WriteLine("Проверить и построить план отправки в orders-copy:");
-    Console.WriteLine($"  cd ../KafkaReplay/src/KafkaReplay && dotnet run -- --bootstrap {bootstrap} --topic {topic} {window} --routes ../../samples/routes.json --target-bootstrap {bootstrap}");
+    Console.WriteLine($"  cd ../KafkaReplay/src/KafkaReplay && dotnet run -- check --bootstrap {bootstrap} --topic {topic} {window} --routes ../../samples/routes.json --target-bootstrap {bootstrap}");
 }
 else
-    Console.WriteLine($"  cd ../KafkaReplay/src/KafkaReplay && dotnet run -- --bootstrap {bootstrap} --topic {topic} {window} --contracts {Path.GetFullPath(contractsPath)}");
+    Console.WriteLine($"  cd ../KafkaReplay/src/KafkaReplay && dotnet run -- check --bootstrap {bootstrap} --topic {topic} {window} --contracts {Path.GetFullPath(contractsPath)}");
 return 0;
 
 // По одному событию каждого типа из реестра: пустой объект класса (все поля по умолчанию), сериализованный

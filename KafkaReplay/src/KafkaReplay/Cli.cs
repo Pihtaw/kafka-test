@@ -2,12 +2,11 @@ namespace KafkaReplay;
 
 public static class Cli
 {
-    // неверные параметры: сообщение и справка
+    // неверные параметры или настройки: сообщение и где взять справку
     public static int Fail(string message)
     {
         Console.WriteLine($"ОТКАЗ: {message}");
-        Console.WriteLine();
-        Console.WriteLine(CliOptions.Usage);
+        Console.WriteLine("Справка: replay --help, replay check --help, replay execute --help");
         return ExitCodes.Blocked;
     }
 

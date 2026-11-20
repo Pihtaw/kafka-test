@@ -42,18 +42,18 @@ TO="$(date -d '+2 seconds' +'%Y-%m-%d %H:%M:%S%:z')"
 
 echo "== 3. Проверка и план (ничего не отправляется)"
 set +e
-dotnet run --project "$REPLAY" -- --bootstrap localhost:9092 --topic orders-multi --from "$FROM" --to "$TO" \
+dotnet run --project "$REPLAY" -- check --bootstrap localhost:9092 --topic orders-multi --from "$FROM" --to "$TO" \
     --routes "$ROOT/KafkaReplay/samples/routes.json" --target-bootstrap localhost:9092 --out "$OUT"
 CHECK=$?
 echo "   код выхода $CHECK (ожидаем 1: в данных Seeder есть отклонённые записи)"
 
 echo "== 4. Отправка по плану"
-dotnet run --project "$REPLAY" -- --execute --plan "$OUT/plan.json" --target-bootstrap localhost:9092
+dotnet run --project "$REPLAY" -- execute --plan "$OUT/plan.json" --target-bootstrap localhost:9092
 SEND=$?
 echo "   код выхода $SEND (ожидаем 0: всё из плана записано и совпало байт в байт)"
 
 echo "== 5. Повторный запуск того же плана: ничего не должно уйти второй раз"
-dotnet run --project "$REPLAY" -- --execute --plan "$OUT/plan.json" --target-bootstrap localhost:9092 | tee "$OUT/repeat.log"
+dotnet run --project "$REPLAY" -- execute --plan "$OUT/plan.json" --target-bootstrap localhost:9092 | tee "$OUT/repeat.log"
 REPEAT=${PIPESTATUS[0]}
 echo "   код выхода $REPEAT"
 set -e

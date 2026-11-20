@@ -13,7 +13,7 @@ public enum DeliveryStatus
     NotWritten,      // точно не записано
     Unknown,         // результат неизвестен
     RejectedByCheck, // отклонено проверкой
-    NotSent          // не отправлялось: чужое событие, tombstone, нет маршрута, или запуск без --execute
+    NotSent          // не отправлялось: чужое событие, tombstone, нет маршрута, или запуск только check
 }
 
 public static class DeliveryStatusText

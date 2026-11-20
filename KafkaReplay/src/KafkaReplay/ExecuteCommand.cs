@@ -3,7 +3,7 @@ using Confluent.Kafka;
 
 namespace KafkaReplay;
 
-// --execute: отправить записи строго из plan.json, без повторного чтения источника и без повторной проверки.
+// replay execute: отправить записи строго из plan.json, без повторного чтения источника и без повторной проверки.
 // проверить план целиком -> отправить -> побайтово сверить отправленное -> статусы и отчeт
 public static class ExecuteCommand
 {
@@ -87,7 +87,7 @@ public static class ExecuteCommand
                 catch (KafkaException e)
                 {
                     // чтение цели оборвалось: что успели — сверено, остальное «не сверено» с причиной, а не потеряно.
-                    // Повторный --execute ничего не отправит и сверит их заново
+                    // Повторный execute ничего не отправит и сверит их заново
                     foreach (var index in byOffset.Values.Select(left => left.Index))
                         verified[index] = VerifyResult.Failed(index, e.Error.Reason);
                     Console.WriteLine($"  ⚠ {group.Key.Topic}/p{group.Key.Partition}: сверка оборвалась ({e.Error.Reason}), не сверено {byOffset.Count}");
@@ -130,7 +130,7 @@ public static class ExecuteCommand
         Console.WriteLine();
         foreach (var (status, count) in byStatus) Console.WriteLine($"  {status.Ru(),-21} {count}");
         Console.WriteLine($"Побайтовая сверка: совпало {matched} из {written} записанных" + (mismatched > 0 ? $", расхождений {mismatched}" : "") +
-                          (notVerified > 0 ? $", ⚠ не сверено {notVerified} — запусти --execute ещё раз, он только досверит" : ""));
+                          (notVerified > 0 ? $", ⚠ не сверено {notVerified} — запусти execute ещё раз, он только досверит" : ""));
         Console.WriteLine(converges ? $"✅ Статусы сходятся: {total} из {plan.TotalRecords} записей" : $"❌ Статусы НЕ сходятся: {total} из {plan.TotalRecords}");
 
         string mdPath = await ReportMarkdown.WriteAsync(Path.GetDirectoryName(statePath)!, "execution.md", BuildMarkdown(plan, state, byStatus, target, converges)).ConfigureAwait(false);

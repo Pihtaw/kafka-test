@@ -4,7 +4,7 @@ using Header = MessageCheck.Header;
 
 namespace KafkaReplay;
 
-// Без --execute: прочитать окно по времени -> проверить каждую запись -> отчeт -> (если есть маршруты) план отправки. Не пишем.
+// replay check: прочитать окно по времени -> проверить каждую запись -> отчeт -> (если есть маршруты) план отправки. Не пишем.
 public static class DryRunCommand
 {
     // файлы прошлого запуска, рядом с которыми новый отчёт писать нельзя
@@ -229,7 +229,7 @@ public static class DryRunCommand
         Console.WriteLine($"Отчёт: {reportPath}");
         Console.WriteLine($"       {mdPath}");
 
-        // план — только по полностью и правильно прочитанному окну: иначе --execute отправил бы неполные данные
+        // план — только по полностью и правильно прочитанному окну: иначе execute отправил бы неполные данные
         if (routes is not null && planBlockers.Count > 0)
         {
             Console.WriteLine("План отправки НЕ записан:");
@@ -243,7 +243,7 @@ public static class DryRunCommand
                 entries.Count, notInPlan, items);
             string planPath = await PlanStore.SaveAsync(opt.OutDir, planFile).ConfigureAwait(false);
             Console.WriteLine($"План отправки: {planPath} — к отправке {items.Count} из {entries.Count}");
-            Console.WriteLine($"Отправить: dotnet run -- --execute --plan {planPath} {(opt.TargetBootstrap is not null ? $"--target-bootstrap {opt.TargetBootstrap}" : $"--target-env {opt.TargetEnv}")}");
+            Console.WriteLine($"Отправить: dotnet run -- execute --plan {planPath} {(opt.TargetBootstrap is not null ? $"--target-bootstrap {opt.TargetBootstrap}" : $"--target-env {opt.TargetEnv}")}");
         }
 
         Console.WriteLine($"Код выхода {exitCode}: {ExitCodes.Describe(exitCode)}");

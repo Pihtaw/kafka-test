@@ -14,7 +14,7 @@ public interface IPlanSender
 
 public record ItemState(int Index, string ItemSha256, DeliveryStatus Status, int? Partition, long? Offset, string? Error, DateTimeOffset At);
 
-// NotVerified — сверка не состоялась (ошибка чтения цели), причина; это не «расхождение», повторный --execute сверит заново
+// NotVerified — сверка не состоялась (ошибка чтения цели), причина; это не «расхождение», повторный execute сверит заново
 public record VerifyResult(int Index, bool Matches, List<string> Differences, string? NotVerified = null)
 {
     public static VerifyResult Failed(int index, string reason) => new(index, false, [], reason);
@@ -75,7 +75,7 @@ public static class Executor
             if (rest.Count > 0)
             {
                 save(Snapshot());
-                Console.WriteLine($"  ⚠ в пачке не всё записано — отправка остановлена, не отправлено {rest.Count}; повторный --execute продолжит с этого места");
+                Console.WriteLine($"  ⚠ в пачке не всё записано — отправка остановлена, не отправлено {rest.Count}; повторный execute продолжит с этого места");
             }
             break;
         }
