@@ -28,6 +28,11 @@ public sealed class ReplayCli
         HelpName = "N|all",
         CustomParser = ParseTail
     };
+    private readonly Option<string> _schemas = new("--schemas")
+    {
+        Description = "папка с JSON-схемами контрактов (*.json, схема находится по title = имени класса): сырое событие дополнительно проверяется по схеме — обязательные поля, null там, где нельзя, типы, лишние поля",
+        HelpName = "папка"
+    };
     private readonly Option<string> _out;
 
     // check: план отправки
@@ -41,6 +46,12 @@ public sealed class ReplayCli
         HelpName = "crc32|murmur2|keep",
         CustomParser = ParsePartitioner
     };
+
+    // schemas
+    private readonly Option<string> _schemasContracts = new("--contracts")
+        { Description = "сборка реестра контрактов (Dodo.EventRegistry.dll), из классов которой строятся схемы", Required = true, HelpName = "dll" };
+    private readonly Option<string> _schemasOut = new("--out")
+        { Description = "куда писать схемы, по файлу на тип события", HelpName = "папка", DefaultValueFactory = _ => SchemasCommand.DefaultOut };
 
     // execute
     private readonly Option<string> _plan = new("--plan") { Description = "путь к plan.json, построенному командой check", Required = true, HelpName = "plan.json" };
@@ -58,7 +69,7 @@ public sealed class ReplayCli
 
         Check = new Command("check", "Прочитать окно топика, проверить события контрактами, написать отчёт и (с --routes) план отправки. Ничего не отправляет.")
         {
-            _topic, _from, _to, _bootstrap, _sourceEnv, _contracts, _tail, _out,
+            _topic, _from, _to, _bootstrap, _sourceEnv, _contracts, _schemas, _tail, _out,
             _routes, _checkTargetBootstrap, _checkTargetEnv, _partitioner
         };
         Execute = new Command("execute", "Отправить записи строго по plan.json и побайтово сверить отправленное. Источник заново не читается.")
@@ -66,12 +77,20 @@ public sealed class ReplayCli
             _plan, _executeTargetBootstrap, _executeTargetEnv
         };
 
+        Schemas = new Command("schemas", "Сгенерировать JSON-схемы всех событий из сборки контрактов (для check --schemas). Ничего не читает из Kafka.")
+        {
+            _schemasContracts, _schemasOut
+        };
+
         Root = new RootCommand("replay — переналивка событий Kafka с проверкой контрактами");
         Root.Subcommands.Add(Check);
         Root.Subcommands.Add(Execute);
+        Root.Subcommands.Add(Schemas);
 
         Check.SetAction((parseResult, _) =>
             TryCheckOptions(parseResult, out var options, out var error) ? DryRunCommand.RunAsync(options!) : Task.FromResult(Cli.Fail(error!)));
+        Schemas.SetAction((parseResult, _) =>
+            Task.FromResult(SchemasCommand.Run(parseResult.GetValue(_schemasContracts)!, parseResult.GetValue(_schemasOut)!)));
         Execute.SetAction((parseResult, _) =>
             TryExecuteOptions(parseResult, out var options, out var error) ? ExecuteCommand.RunAsync(options!) : Task.FromResult(Cli.Fail(error!)));
     }
@@ -79,6 +98,7 @@ public sealed class ReplayCli
     public RootCommand Root { get; }
     public Command Check { get; }
     public Command Execute { get; }
+    public Command Schemas { get; }
 
     // Разбор без запуска — для тестов: ошибки System.CommandLine и наши проверки связей одним текстом
     public bool TryParse(string[] args, out CliOptions? options, out string? error)
@@ -109,7 +129,7 @@ public sealed class ReplayCli
         options = new CliOptions(RunMode.DryRun, r.GetValue(_topic), r.GetValue(_from), r.GetValue(_to),
             r.GetValue(_bootstrap), r.GetValue(_sourceEnv), r.GetValue(_contracts), r.GetValue(_routes),
             r.GetValue(_checkTargetBootstrap), r.GetValue(_checkTargetEnv), r.GetValue(_partitioner) ?? PartitionStrategy.Crc32,
-            null, r.GetValue(_out)!, r.GetValue(_tail) ?? CliOptions.DefaultTail);
+            null, r.GetValue(_out)!, r.GetValue(_tail) ?? CliOptions.DefaultTail, r.GetValue(_schemas));
         return true;
     }
 

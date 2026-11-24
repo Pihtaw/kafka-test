@@ -30,6 +30,11 @@ public static class DryRunCommand
         if (opt.Contracts is not null && !ContractsLoader.TryLoad(opt.Contracts, out contracts, out error)) return Cli.Fail(error!);
         var catalog = contracts?.Catalog ?? EventCatalog.Default();
 
+        // JSON-схемы контрактов (по желанию): сырое событие дополнительно проверяется по схеме своего типа
+        SchemaSet? schemas = null;
+        if (opt.Schemas is not null && !SchemaSet.TryLoad(opt.Schemas, out schemas, out error)) return Cli.Fail(error!);
+        string schemasInfo = schemas?.Describe() ?? "не проверялись (нет --schemas)";
+
         Routes? routes = null;
         ConnectionSettings? target = null;
         Dictionary<string, int> targetPartitions = [];
@@ -59,6 +64,7 @@ public static class DryRunCommand
 
         Console.WriteLine($"Источник: {source.Describe()}");
         Console.WriteLine($"Контракты: {contracts?.Describe() ?? "встроенные учебные (MessageCheck.SampleContracts)"}");
+        Console.WriteLine($"JSON-схемы: {schemasInfo}");
         if (target is not null) Console.WriteLine($"Цель: {target.Describe()}, партиционер {opt.Partitioner.ToString().ToLowerInvariant()}");
         bool topicInRegistry = contracts?.HasTopic(opt.Topic!) ?? true;
         if (!topicInRegistry)
@@ -103,13 +109,24 @@ public static class DryRunCommand
             if (eventType is not null && contracts is not null && topicInRegistry && !contracts.IsDeclaredFor(opt.Topic!, eventType))
                 decision = decision with { Details = $"{decision.Details}; тип не объявлен в реестре для топика {opt.Topic}" };
 
+            // JSON-схема: сырое тело, а не то, что прочитал C#-класс; и для прочитанных, и для упавших при чтении
+            IReadOnlyList<SchemaViolation>? violations = null;
+            string? typeForSchema = EventTypeOf(record);
+            if (schemas is not null && record.Payload is not null && typeForSchema is not null
+                && decision.Verdict is Verdict.Allowed or Verdict.ConversionError)
+            {
+                violations = schemas.Check(typeForSchema, record.Payload);
+                if (violations is null)
+                    decision = decision with { Details = $"{decision.Details}; JSON-схемы для типа нет — по схеме не проверено" };
+            }
+
             if (place == WindowPlace.LateAfterEnd)
                 decision = decision with { Details = $"{decision.Details}; опоздавшая: время в окне, но в логе после конца окна — найдена в хвосте" };
             string? contractVersion = null;
             if (eventType is not null)
                 contractVersion = contracts is null ? "учебный" : contracts.VersionOf(eventType);
             bool outsideWindow = place == WindowPlace.OutsideWindow;
-            var entry = ReportEntry.From(cr, record, decision, outsideWindow, contractVersion);
+            var entry = ReportEntry.From(cr, record, decision, outsideWindow, contractVersion, violations);
 
             // в план попадают только разрешённые записи со временем в окне, для которых есть маршрут
             if (routes is not null && eventType is not null && outsideWindow)
@@ -150,6 +167,7 @@ public static class DryRunCommand
         int rejected = entries.Count(e => e.IsRejected);
         int warnings = entries.Count(e => e.HasWarnings);
         int outside = entries.Count(e => e.OutsideWindow);
+        int schemaFailed = entries.Count(e => e.HasSchemaViolations);
         bool tailComplete = plan.TrueForAll(p => readTo[p.Partition] == p.High);
         int exitCode = ExitCodes.For(allRead, sumMatches, rejected);
 
@@ -186,7 +204,8 @@ public static class DryRunCommand
         Console.WriteLine($"Сверка чтения: {tally.Describe(entries.Count, tail.TotalSkipped)}");
         Console.WriteLine(WindowSummary(tail.TotalLate, outside, tailComplete, opt.Tail));
         foreach (var (verdict, count) in byVerdict.OrderBy(x => x.Key, StringComparer.Ordinal)) Console.WriteLine($"  {verdict,-15} {count}");
-        if (warnings > 0) Console.WriteLine($"  ⚠ записей с опасными отличиями: {warnings} (поле молча стало значением по умолчанию или изменилось)");
+        if (warnings > 0) Console.WriteLine($"  ⚠ записей с опасными отличиями: {warnings} (поле молча стало значением по умолчанию, изменилось или не прошло JSON-схему)");
+        if (schemas is not null) Console.WriteLine($"  JSON-схема: нарушения в {schemaFailed} записях из {entries.Count}");
         Console.WriteLine(readOk ? "✅ Сводка сходится" : "❌ Сводка НЕ сходится");
 
         // отчет
@@ -197,11 +216,12 @@ public static class DryRunCommand
             source = source.Describe(),
             target = target?.Describe(),
             contracts = new { path = contracts?.RegistryPath, version = contracts?.RegistryVersion, description = contractsInfo },
+            schemas = new { path = schemas?.Folder, count = schemas?.Count, description = schemasInfo },
             topicInRegistry,
             topic = opt.Topic,
             window = new { from = opt.From, to = opt.To, fromMs, toMs },
             partitions = plan,
-            summary = new { read = entries.Count, offsetsInRange = expected, gaps, partitionsFinished = finished.Count, allRead, sumMatches, rejected, warnings, byVerdict, byReason, byStatus, rows },
+            summary = new { read = entries.Count, offsetsInRange = expected, gaps, partitionsFinished = finished.Count, allRead, sumMatches, rejected, warnings, schemaFailed, byVerdict, byReason, byStatus, rows },
             windowCheck = new { tail = opt.Tail == long.MaxValue ? "all" : opt.Tail.ToString(System.Globalization.CultureInfo.InvariantCulture), tailComplete, lateAfterEnd = tail.TotalLate, skippedInTail = tail.TotalSkipped, outsideWindow = outside },
             readCheck = new
             {
@@ -222,7 +242,7 @@ public static class DryRunCommand
         string mdPath = await ReportMarkdown.WriteAsync(opt.OutDir, "report.md", ReportMarkdown.Build(
             "Отчёт KafkaReplay: проверка (ничего не отправлялось)",
             [("Источник", source.Describe()), ("Топик", opt.Topic!), ("Окно", $"[{opt.From:yyyy-MM-dd HH:mm:ss zzz} ; {opt.To:yyyy-MM-dd HH:mm:ss zzz})"),
-             ("Контракты", contractsInfo), ("Цель", target?.Describe() ?? "нет (план не строился)"),
+             ("Контракты", contractsInfo), ("JSON-схемы", schemasInfo), ("Цель", target?.Describe() ?? "нет (план не строился)"),
              ("Сверка чтения", $"{(readOk ? "✅" : "❌")} {tally.Describe(entries.Count, tail.TotalSkipped)}, дочитаны партиции {finished.Count} из {plan.Count}"),
              ("Окно по времени", WindowSummary(tail.TotalLate, outside, tailComplete, opt.Tail))],
             entries)).ConfigureAwait(false);

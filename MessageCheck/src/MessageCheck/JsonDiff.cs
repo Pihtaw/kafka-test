@@ -8,7 +8,8 @@ public enum DifferenceKind
     MissingNull,    // поля нет в событии, сервис увидит null — обычно это новое необязательное поле
     MissingDefault, // поля нет в событии, сервис увидит 0 / "" / false — опасно: выглядит как настоящее значение
     Changed,         // поле есть, но после чтения значение другое (тип, округление, формат)
-    Formatted
+    Formatted,
+    Schema          // сырое событие не проходит JSON-схему контракта (обязательное поле, null там, где нельзя, тип, лишнее поле)
 }
 
 public record Difference(string Path, DifferenceKind Kind, string? Source, string? Result)

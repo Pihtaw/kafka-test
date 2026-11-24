@@ -56,6 +56,17 @@ public class ReplayCliTests
         Assert.Null(Parsed(Check("--bootstrap", "x:1")).Contracts);
 
     [Fact]
+    public void Schemas_folder_is_parsed_and_optional()
+    {
+        Assert.Equal("contracts/schemas", Parsed(Check("--bootstrap", "x:1", "--schemas", "contracts/schemas")).Schemas);
+        Assert.Null(Parsed(Check("--bootstrap", "x:1")).Schemas);
+    }
+
+    [Fact]
+    public void Execute_has_no_schemas() =>
+        Assert.Contains("--schemas", ParseError(["execute", "--plan", "p.json", "--target-bootstrap", "y:1", "--schemas", "s"]), StringComparison.Ordinal);
+
+    [Fact]
     public void Out_dir_by_default_has_date_and_time() =>
         Assert.Equal("run-20261014-154200", Parsed(Check("--bootstrap", "x:1")).OutDir);
 

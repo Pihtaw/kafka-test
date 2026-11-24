@@ -20,9 +20,13 @@ public record ReportEntry(
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
 
     // contractVersion — версия пакета контракта, которым читали (из сборки), packageVersion — из заголовка события
-    public static ReportEntry From(ConsumeResult<byte[], byte[]> cr, KafkaRecord r, Decision d, bool outsideWindow, string? contractVersion)
+    // schemaViolations — нарушения JSON-схемы сырым событием (null — по схеме не проверяли)
+    public static ReportEntry From(ConsumeResult<byte[], byte[]> cr, KafkaRecord r, Decision d, bool outsideWindow, string? contractVersion,
+                                   IReadOnlyList<SchemaViolation>? schemaViolations = null)
     {
         var (diffs, note) = DifferencesOf(r, d);
+        if (schemaViolations is { Count: > 0 })
+            diffs.AddRange(schemaViolations.Select(v => new ReportDifference(v.Path, nameof(DifferenceKind.Schema), v.Describe(), v.IsWarning)));
         // статус до отправки
         var status = d.Verdict is MessageCheck.Verdict.Rejected or MessageCheck.Verdict.ConversionError
             ? DeliveryStatus.RejectedByCheck : DeliveryStatus.NotSent;
@@ -49,6 +53,7 @@ public record ReportEntry(
 
     public bool IsRejected => string.Equals(Verdict, nameof(MessageCheck.Verdict.Rejected), StringComparison.Ordinal) || string.Equals(Verdict, nameof(MessageCheck.Verdict.ConversionError), StringComparison.Ordinal);
     public bool HasWarnings => Differences.Any(x => x.Warning);
+    public bool HasSchemaViolations => Differences.Exists(x => string.Equals(x.Kind, nameof(DifferenceKind.Schema), StringComparison.Ordinal));
 
     // в report.json: настоящие отличия — полностью, Formatted — сводкой, как в report.md.
     // Иначе на реальных данных Formatted занимает сотни мегабайт: UUID в другом регистре, сотни на запись

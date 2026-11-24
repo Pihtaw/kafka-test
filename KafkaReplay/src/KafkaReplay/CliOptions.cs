@@ -21,7 +21,8 @@ public record CliOptions(
     PartitionStrategy Partitioner,
     string? Plan,               // для execute: путь к plan.json
     string OutDir,
-    long Tail = CliOptions.DefaultTail)   // сколько записей после конца окна просматривать в каждой партиции
+    long Tail = CliOptions.DefaultTail,   // сколько записей после конца окна просматривать в каждой партиции
+    string? Schemas = null)               // папка с JSON-схемами контрактов: сырое событие дополнительно проверяется по схеме
 {
     public const string TimeFormat = "yyyy-MM-dd HH:mm:sszzz";
     public const long DefaultTail = 10_000;
