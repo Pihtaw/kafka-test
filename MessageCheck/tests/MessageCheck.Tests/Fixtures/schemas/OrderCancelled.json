@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "required": [ "OrderId", "Reason" ],
+  "properties": {
+    "OrderId": { "type": "integer" },
+    "Reason": { "type": "string", "minLength": 1 }
+  }
+}

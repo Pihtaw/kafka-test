@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "OrderCreated",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [ "OrderId", "Amount", "Currency" ],
+  "properties": {
+    "OrderId": { "type": "integer", "format": "int64" },
+    "Amount": { "type": "number" },
+    "Currency": { "type": [ "string", "null" ], "enum": [ "RUB", "KZT", null ] }
+  }
+}
