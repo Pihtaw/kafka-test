@@ -18,6 +18,9 @@ public class EventCatalog
 
     public int Count => _types.Count;
 
+    // все типы событий каталога: полное имя (как в Event-Type) → класс
+    public IReadOnlyDictionary<string, Type> Types => _types;
+
     // чужое событие
     public bool TryGet(string eventType, out Type dtoType) => _types.TryGetValue(eventType, out dtoType!);
 
