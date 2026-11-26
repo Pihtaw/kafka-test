@@ -19,3 +19,4 @@ contracts/*
 *.local.sh
 __pycache__/
 /routes-*.json
+nupkg/

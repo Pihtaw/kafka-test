@@ -6,6 +6,13 @@
     <RootNamespace>KafkaReplay</RootNamespace>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>replay</ToolCommandName>
+    <PackageId>KafkaReplay</PackageId>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Confluent.Kafka" />
     <PackageReference Include="System.CommandLine" />
